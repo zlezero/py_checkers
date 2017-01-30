@@ -34,8 +34,7 @@ def initPion():
     xB = -25
     yB = -75
     xW = 75
-    yW = 75
-    
+    yW = 75   
     
     #while coteActuel <= 1:
         # while nombreLignes < 4:
