@@ -26,6 +26,8 @@ def showDamier(): #Fonction qui trace un damier
     initPion()
 
 def initPion():
+    
+    #Initialisation des variables
     nombreLignes = 1
     coteActuel = 0
     couleur = "grey"
@@ -33,6 +35,8 @@ def initPion():
     yB = -75
     xW = 75
     yW = 75
+    
+    
     #while coteActuel <= 1:
         # while nombreLignes < 4:
         #     yB = 25
@@ -77,21 +81,21 @@ def initPion():
         # nombreLignes = 0
 
         
-    while nombreLignes <= 10:
-        if nombreLignes <= 4 or nombreLignes > 6:
-            if nombreLignes == 7:
+    while nombreLignes <= 10: #On boucle tant que l'on a pas atteint la fin du damier
+        if nombreLignes <= 4 or nombreLignes > 6: #Cela permet d'avoir la coupure de deux lignes au milieu du damier
+            if nombreLignes == 7: #Si le nombre de ligne est égal à 7 cela veut dire que l'on a changé de coté
                 couleur = "white"
                 yB = 225
-            if nombreLignes % 2 == 0:
-                while xB < 500:
+            if nombreLignes % 2 == 0: #Si on les lignes sont paires on affiche les ronds d'une certaine façon
+                while xB < 470: #Tant que l'on a pas fini une ligne on affiche des ronds
                     rond(xB + 50, yB + 100, 25, couleur)
                     xB += 100
                 xB = -25
                 yB += 100
-            else:
-                if nombreLignes == 7:
+            else: #Sinon on les affiche décalés
+                if nombreLignes == 7: #Si le nombre de ligne est égal à 7 on modifie la hauteur
                     yW = 375
-                while xW < 500:
+                while xW < 480: #Tant que l'on a pas fini une ligne on affiche des ronds
                     rond(xW, yW, 25, couleur)
                     xW += 100
                 xW = 75
