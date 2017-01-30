@@ -83,7 +83,7 @@ def initPion():
                 couleur = "white"
                 yB = 225
             if nombreLignes % 2 == 0:
-                while xB < 500:
+                while xB < 470:
                     rond(xB + 50, yB + 100, 25, couleur)
                     xB += 100
                 xB = -25
@@ -91,7 +91,7 @@ def initPion():
             else:
                 if nombreLignes == 7:
                     yW = 375
-                while xW < 500:
+                while xW < 480:
                     rond(xW, yW, 25, couleur)
                     xW += 100
                 xW = 75
