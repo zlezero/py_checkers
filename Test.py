@@ -85,13 +85,8 @@ def initPion():
             if nombreLignes == 7: #Si le nombre de ligne est égal à 7 cela veut dire que l'on a changé de coté
                 couleur = "white"
                 yB = 225
-<<<<<<< HEAD
-            if nombreLignes % 2 == 0: #Si on les lignes sont paires on affiche les ronds d'une certaine façon
-                while xB < 470: #Tant que l'on a pas fini une ligne on affiche des ronds
-=======
             if nombreLignes % 2 == 0:
                 while xB < 470:
->>>>>>> d522d1b91edb79d984c6cf2f13de4d11b3269477
                     rond(xB + 50, yB + 100, 25, couleur)
                     xB += 100
                 xB = -25
@@ -99,11 +94,7 @@ def initPion():
             else: #Sinon on les affiche décalés
                 if nombreLignes == 7: #Si le nombre de ligne est égal à 7 on modifie la hauteur
                     yW = 375
-<<<<<<< HEAD
-                while xW < 480: #Tant que l'on a pas fini une ligne on affiche des ronds
-=======
-                while xW < 480:
->>>>>>> d522d1b91edb79d984c6cf2f13de4d11b3269477
+                while xW < 480: #Tant que l'on a pas fini une ligne on affiche des ronds 
                     rond(xW, yW, 25, couleur)
                     xW += 100
                 xW = 75
