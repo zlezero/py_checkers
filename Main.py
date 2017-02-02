@@ -1,11 +1,11 @@
 from tkinter import *
-
+from GameEngine import *
 
 #0 = Vide
 #1 = Pion Blanc
 #2 = Pion Noir
 #3 = Dame Blanche
-#4 = Dame Noire
+#4 = Dame Noir e
 
 TableauDames = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, #0 to 9
                 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, #10 to 19
@@ -26,70 +26,70 @@ TableauDames = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, #0 to 9
                 
 teamToPlay = "Black"
 
-def movePion(PionSelect, Direction):
-    pionToMove = PionSelect
-    pionDirection = Direction
-    if TableauDames[pionToMove] != 0:
-        if pionDirection == "DiagDroiteBas":
-            if TableauDames[pionToMove + 11] == 0:
-                if TableauDames[pionToMove] == 1:
-                    TableauDames[pionToMove  + 11] = 1
-                elif TableauDames[pionToMove] == 2:
-                    TableauDames[pionToMove  + 11] = 2
-                TableauDames[pionToMove] = 0
-                print("Déplacement : Diagonale Droite Basse")
-            elif TableauDames[pionToMove + 11] == 2 and TableauDames[pionToMove] == 1:
-                print("Pion adverse !")
-            elif TableauDames[pionToMove + 11] == 1 and TableauDames[pionToMove] == 2:
-                print("Pion adverse !")
-            else:
-                print("Déplacement impossible")
-        elif pionDirection == "DiagGaucheBas":
-            if TableauDames[pionToMove + 9] == 0:
-                if TableauDames[pionToMove] == 1:
-                    TableauDames[pionToMove  + 9] = 1
-                elif TableauDames[pionToMove] == 2:
-                    TableauDames[pionToMove  + 9] = 2
-                TableauDames[pionToMove] = 0
-                print("Déplacement : Diagonale Gauche Basse")
-            else:
-                print("Déplacement impossible")
-        
-        elif pionDirection == "DiagGaucheHaut":
-            if TableauDames[pionToMove - 12] == 0:
-                if TableauDames[pionToMove] == 1:
-                    TableauDames[pionToMove  - 12] = 1
-                elif TableauDames[pionToMove] == 2:
-                    TableauDames[pionToMove  - 12] = 2
-                TableauDames[pionToMove] = 0
-                print("Déplacement : Diagonale Gauche haut")
-            elif TableauDames[pionToMove - 12] == 2 and TableauDames[pionToMove] == 1:
-                print("Pion adverse !")
-            elif TableauDames[pionToMove - 12] == 1 and TableauDames[pionToMove] == 2:
-                print("Pion adverse !")
-            else:
-                print("Déplacement impossible")
-        elif pionDirection == "DiagDroiteHaut":
-            if TableauDames[pionToMove - 9] == 0:
-                if TableauDames[pionToMove] == 1:
-                    TableauDames[pionToMove  - 9] = 1
-                elif TableauDames[pionToMove] == 2:
-                    TableauDames[pionToMove  - 9] = 2
-                TableauDames[pionToMove] = 0
-                print("Déplacement : Diagonale Droite Haute")
-            elif TableauDames[pionToMove - 9] == 2 and TableauDames[pionToMove] == 1:
-                print("Pion adverse !")
-            elif TableauDames[pionToMove - 9] == 1 and TableauDames[pionToMove] == 2:
-                print("Pion adverse !")
-            else:
-                print("Déplacement impossible")
-        else:
-            print("Direction inconnue !")
-    else:
-        print("Pion inexistant !")
-    showTerrain()
+# def movePion(PionSelect, Direction):
+#     pionToMove = PionSelect
+#     pionDirection = Direction
+#     if TableauDames[pionToMove] != 0:
+#         if pionDirection == "DiagDroiteBas":
+#             if TableauDames[pionToMove + 11] == 0:
+#                 if TableauDames[pionToMove] == 1:
+#                     TableauDames[pionToMove  + 11] = 1
+#                 elif TableauDames[pionToMove] == 2:
+#                     TableauDames[pionToMove  + 11] = 2
+#                 TableauDames[pionToMove] = 0
+#                 print("Déplacement : Diagonale Droite Basse")
+#             elif TableauDames[pionToMove + 11] == 2 and TableauDames[pionToMove] == 1:
+#                 print("Pion adverse !")
+#             elif TableauDames[pionToMove + 11] == 1 and TableauDames[pionToMove] == 2:
+#                 print("Pion adverse !")
+#             else:
+#                 print("Déplacement impossible")
+#         elif pionDirection == "DiagGaucheBas":
+#             if TableauDames[pionToMove + 9] == 0:
+#                 if TableauDames[pionToMove] == 1:
+#                     TableauDames[pionToMove  + 9] = 1
+#                 elif TableauDames[pionToMove] == 2:
+#                     TableauDames[pionToMove  + 9] = 2
+#                 TableauDames[pionToMove] = 0
+#                 print("Déplacement : Diagonale Gauche Basse")
+#             else:
+#                 print("Déplacement impossible")
+#         
+#         elif pionDirection == "DiagGaucheHaut":
+#             if TableauDames[pionToMove - 12] == 0:
+#                 if TableauDames[pionToMove] == 1:
+#                     TableauDames[pionToMove  - 12] = 1
+#                 elif TableauDames[pionToMove] == 2:
+#                     TableauDames[pionToMove  - 12] = 2
+#                 TableauDames[pionToMove] = 0
+#                 print("Déplacement : Diagonale Gauche haut")
+#             elif TableauDames[pionToMove - 12] == 2 and TableauDames[pionToMove] == 1:
+#                 print("Pion adverse !")
+#             elif TableauDames[pionToMove - 12] == 1 and TableauDames[pionToMove] == 2:
+#                 print("Pion adverse !")
+#             else:
+#                 print("Déplacement impossible")
+#         elif pionDirection == "DiagDroiteHaut":
+#             if TableauDames[pionToMove - 9] == 0:
+#                 if TableauDames[pionToMove] == 1:
+#                     TableauDames[pionToMove  - 9] = 1
+#                 elif TableauDames[pionToMove] == 2:
+#                     TableauDames[pionToMove  - 9] = 2
+#                 TableauDames[pionToMove] = 0
+#                 print("Déplacement : Diagonale Droite Haute")
+#             elif TableauDames[pionToMove - 9] == 2 and TableauDames[pionToMove] == 1:
+#                 print("Pion adverse !")
+#             elif TableauDames[pionToMove - 9] == 1 and TableauDames[pionToMove] == 2:
+#                 print("Pion adverse !")
+#             else:
+#                 print("Déplacement impossible")
+#         else:
+#             print("Direction inconnue !")
+#     else:
+#         print("Pion inexistant !")
+#     showTerrain()
 
-def movePion2(PionSelect, Direction):
+def movePion(PionSelect, Direction):
     
     pionToMove = PionSelect
     pionDirection = Direction
@@ -180,54 +180,50 @@ def showTerrain():
         print(tableauTemp)
 
 def showDamier(): #Fonction qui trace un damier
-    x = -50
+    x = -100
     y = -50
     line = 0
     while line <= 10: #On boucle tant que toutes les lignes n'ont pas été tracées
         y = 0
         if line % 2 == 0: #Si le numéro de ligne est impaire on les places normalement
             while y < 500: #On boucle tant que l'on a pas fait chacune des lignes
-                while x < 450: #On boucle tant que l'on a pas fini chaque carré d'une ligne
+                while x < 500: #On boucle tant que l'on a pas fini chaque carré d'une ligne
                     can.create_rectangle(x+50, y, x+100, y + 50, fill='black')
                     x += 100       
-                x = -50
+                x = -100
                 y += 100
         else: #Sinon on les décales
-            while y < 500: #On boucle tant que l'on a pas fait chacune des lignes
-                while x < 500: #On boucle tant que l'on a pas fini chaque carré d'une ligne
+            while y < 470: #On boucle tant que l'on a pas fait chacune des lignes
+                while x < 390: #On boucle tant que l'on a pas fini chaque carré d'une ligne
                     can.create_rectangle(x+100, y+50, x+150, y + 100, fill='black')
                     x += 100
-                x = -50
+                x = -100
                 y += 100
         line += 1
+        showTerrainFromPionPlace()
 
-def showTerrainFromPionPlace(): #Fonction qui place un pion aléatoirement sur le damier
-    print("--------------------------------------------------")
-    tableauTemp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    i = 0
-    removeId = 0
-    line = 1
-    cercleY = 25
+def showTerrainFromPionPlace(): 
+    i = 0 
+    x = 0
     cercleX = -25
+    cercleY = 25    
+    print("--------------------------------------------------")
     while i < len(TableauDames):
-        x = 0  
+        x = 0
         while x < 10:
             cercleX += 50
-            if TableauDames[i] == 0:
-                tableauTemp[i - removeId] = "O"
-            elif TableauDames[i] == 1:
-                tableauTemp[i - removeId] = "B"
-                cercle(x + cercleX, i + cercleY, 20, 'black')
+            if TableauDames[i] == 1:
+                cercle(cercleX, cercleY, 20, "yellow")
             elif TableauDames[i] == 2:
-                tableauTemp[i - removeId] = "W"
-                cercle(x + cercleX, i + cercleY, 20, 'white')
+                cercle(cercleX, cercleY, 20, "green")
             i += 1
             x += 1
+        cercleX = -25
         cercleY += 50
-        removeId += 10
+                
         
         
-        print(tableauTemp)
+        
     
 
 def cercle(x, y, r, coul): #Fonction permettant de tracer un cercle
@@ -296,18 +292,19 @@ def GetWinner():
         return "WWin"
     else:
         return False
+
 # -- Programme Principal --
 
 #Initialisation de la fenêtre et du canvas
 fen = Tk()
-can = Canvas(fen, width = 500, height = 500, bg = 'ivory' )
-can.pack(side =TOP, padx =0, pady =0)
+can = Canvas(fen, width = 500, height = 500, bg = "ivory")
+can.pack(side = RIGHT, padx = 0, pady =0)
 
 #Initialisation des boutons
-bou1 = Button(fen, text='Afficher damier', command = showDamier)
-bou1.pack(side = LEFT, padx =3, pady =3)
-bou2 = Button(fen, text='Placer un pion', command = showTerrainFromPionPlace)
-bou2.pack(side = RIGHT, padx =3, pady =3)
+bou1 = Button(fen, text='Démarrer', command = showDamier)
+bou1.pack(side = BOTTOM, padx =3, pady =3)
+#bou2 = Button(fen, text='Placer un pion', command = showTerrainFromPionPlace)
+#bou2.pack(side = RIGHT, padx =3, pady =3)
 
 #Boucle principale
 fen.mainloop()
