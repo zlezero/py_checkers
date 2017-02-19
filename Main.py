@@ -1,313 +1,93 @@
+import tkinter as tk
 from tkinter import *
 from GameEngine import *
-
-#0 = Vide
-#1 = Pion Blanc
-#2 = Pion Noir
-#3 = Dame Blanche
-#4 = Dame Noir e
-
-TableauDames = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, #0 to 9
-                1, 0, 1, 0, 1, 0, 1, 0, 1, 0, #10 to 19
-                0, 1, 0, 1, 0, 1, 0, 1, 0, 1, #20 to 29
-                1, 0, 1, 0, 1, 0, 1, 0, 1, 0, #30 to 39
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, #40 to 49
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, #50 to 59
-                0, 2, 0, 2, 0, 2, 0, 2, 0, 2, #60 to 69
-                2, 0, 2, 0, 2, 0, 2, 0, 2, 0, #70 to 79
-                0, 2, 0, 2, 0, 2, 0, 2, 0, 2, #80 to 89
-                2, 0, 2, 0, 2, 0, 2, 0, 2, 0] #90 to 99
-
-# TableauDames = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-#                 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-#                 0, 2, 0, 2, 0, 0, 0, 0, 0, 0,
-#                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-                
-                
-teamToPlay = "Black"
-
-# def movePion(PionSelect, Direction):
-#     pionToMove = PionSelect
-#     pionDirection = Direction
-#     if TableauDames[pionToMove] != 0:
-#         if pionDirection == "DiagDroiteBas":
-#             if TableauDames[pionToMove + 11] == 0:
-#                 if TableauDames[pionToMove] == 1:
-#                     TableauDames[pionToMove  + 11] = 1
-#                 elif TableauDames[pionToMove] == 2:
-#                     TableauDames[pionToMove  + 11] = 2
-#                 TableauDames[pionToMove] = 0
-#                 print("Déplacement : Diagonale Droite Basse")
-#             elif TableauDames[pionToMove + 11] == 2 and TableauDames[pionToMove] == 1:
-#                 print("Pion adverse !")
-#             elif TableauDames[pionToMove + 11] == 1 and TableauDames[pionToMove] == 2:
-#                 print("Pion adverse !")
-#             else:
-#                 print("Déplacement impossible")
-#         elif pionDirection == "DiagGaucheBas":
-#             if TableauDames[pionToMove + 9] == 0:
-#                 if TableauDames[pionToMove] == 1:
-#                     TableauDames[pionToMove  + 9] = 1
-#                 elif TableauDames[pionToMove] == 2:
-#                     TableauDames[pionToMove  + 9] = 2
-#                 TableauDames[pionToMove] = 0
-#                 print("Déplacement : Diagonale Gauche Basse")
-#             else:
-#                 print("Déplacement impossible")
-#         
-#         elif pionDirection == "DiagGaucheHaut":
-#             if TableauDames[pionToMove - 12] == 0:
-#                 if TableauDames[pionToMove] == 1:
-#                     TableauDames[pionToMove  - 12] = 1
-#                 elif TableauDames[pionToMove] == 2:
-#                     TableauDames[pionToMove  - 12] = 2
-#                 TableauDames[pionToMove] = 0
-#                 print("Déplacement : Diagonale Gauche haut")
-#             elif TableauDames[pionToMove - 12] == 2 and TableauDames[pionToMove] == 1:
-#                 print("Pion adverse !")
-#             elif TableauDames[pionToMove - 12] == 1 and TableauDames[pionToMove] == 2:
-#                 print("Pion adverse !")
-#             else:
-#                 print("Déplacement impossible")
-#         elif pionDirection == "DiagDroiteHaut":
-#             if TableauDames[pionToMove - 9] == 0:
-#                 if TableauDames[pionToMove] == 1:
-#                     TableauDames[pionToMove  - 9] = 1
-#                 elif TableauDames[pionToMove] == 2:
-#                     TableauDames[pionToMove  - 9] = 2
-#                 TableauDames[pionToMove] = 0
-#                 print("Déplacement : Diagonale Droite Haute")
-#             elif TableauDames[pionToMove - 9] == 2 and TableauDames[pionToMove] == 1:
-#                 print("Pion adverse !")
-#             elif TableauDames[pionToMove - 9] == 1 and TableauDames[pionToMove] == 2:
-#                 print("Pion adverse !")
-#             else:
-#                 print("Déplacement impossible")
-#         else:
-#             print("Direction inconnue !")
-#     else:
-#         print("Pion inexistant !")
-#     showTerrain()
-
-def movePion(PionSelect, Direction):
-    
-    pionToMove = PionSelect
-    pionDirection = Direction
-    numberChange = 0
-    
-    #On vérifie si le pion existe
-    if TableauDames[pionToMove] == 0:
-        print("Pion inexistant !")
-        return
-    
-    #On vérifie si le pion peut se déplacer s'il est au bord du damier
-    if pionToMove == 10 or pionToMove == 30 or pionToMove == 50 or pionToMove == 70 or pionToMove == 90:
-        if pionDirection == "DiagGaucheBas" or pionDirection == "DiagGaucheHaut":
-            print("Déplacement impossible bord du damier !")
-            return
-    elif pionToMove == 9 or pionToMove == 29 or pionToMove == 49 or pionToMove == 69 or pionToMove == 89:
-        if pionDirection == "DiagDroiteBas" or pionDirection == "DiagDroiteHaut":
-            print("Déplacement impossible bord du damier !")
-            return
         
-    #On change le nombre de case selon la direction
-    if pionDirection == "DiagDroiteBas":
-        print("Déplacement : Diagonale Droite Bas")
-        numberChange = 11
-    elif pionDirection == "DiagGaucheBas":
-        print("Déplacement : Diagonale Gauche Bas")
-        numberChange = 9
-    elif pionDirection == "DiagDroiteHaut":
-        print("Déplacement : Diagonale Droite Haut")
-        numberChange = -9
-    elif pionDirection == "DiagGaucheHaut":
-        print("Déplacement : Diagonale Gauche Haut")
-        numberChange = -11
-    else:
-        print("Direction inconnue !")
-        return
+## -- Toutes les différentes GUI --
+
+class MainMenu(): #Classe représentant le menu principal
     
-    #Déplacement du pion
-    if TableauDames[pionToMove + (numberChange)] == 0: #Si l'endroit ou le pion doit aller est vide
-        if TableauDames[pionToMove] == 1: #On bouge le pion en fonction de son équipe
-            TableauDames[pionToMove + (numberChange)] = 1
-        else:
-            TableauDames[pionToMove + (numberChange)] = 2
-        TableauDames[pionToMove] = 0
-        print("DEBUG : New pos :", pionToMove + (numberChange))
-    elif TableauDames[pionToMove + (numberChange)] == 2 and TableauDames[pionToMove] == 1: #On regarde si on peut prendre un pion
-        if TableauDames[pionToMove + (numberChange * 2)] == 0: #Si une case est libre après le pion
-            TableauDames[pionToMove + (numberChange * 2)] = 1 #On bouge le pion
-            TableauDames[pionToMove + (numberChange)] = 0 #On élimine le pion adverse
-            TableauDames[pionToMove] = 0 #On supprime le pion de son emplacement d'origine
-            print("DEBUG : New pos :", pionToMove + (numberChange * 2))
-            print("Pion pris !")
-        else: #Si un emplacement est indisponible on ne peut pas prendre le pion
-            print("Impossible de prendre le pion !")
-    elif TableauDames[pionToMove + (numberChange)] == 1 and TableauDames[pionToMove] == 2:
-        if TableauDames[pionToMove + (numberChange * 2)] == 0:
-            TableauDames[pionToMove + (numberChange * 2)] = 2            
-            TableauDames[pionToMove + (numberChange)] = 0
-            TableauDames[pionToMove] = 0
-            print("DEBUG : New pos :", pionToMove + (numberChange * 2))
-            print("Pion pris !")
-        else:
-            print("Impossible de prendre le pion !")
-    else:
-        print("Déplacement impossible !")
+    def __init__(self, master): #Initialisation de l'interface et de la classe
+        self.master = master
+        self.frame = Frame(master)
+        Root.title("Jeu de Dames - Menu Principal")
+        self.PlayButton = Button(self.frame, text = "Jouer", width = 25, command = self.Open_GameWindow)
+        self.PlayButton.pack()
+        self.OptionsButton = Button(self.frame, text = "Options", width = 25, command = self.Open_OptionsWindow)
+        self.OptionsButton.pack()
+        self.quitButton = Button(self.frame, text = 'Quitter', width = 25 , command = self.Close_Window)
+        self.quitButton.pack()
+        self.frame.pack()
     
+    def Close_Window(self): #Fonction permettant de fermer la fenêtre
+        self.master.destroy()
     
+    def Open_GameWindow(self): #Fonction ouvrant la fenêtre de jeu
+        Root.title("Jeu de Dames - Jeu")
+        self.newWindow = Toplevel(self.master)
+        self.app = Jeu(self.newWindow)
     
-    showTerrain()
+    def Open_OptionsWindow(self): #Fonction ouvrant la fenêtre des options
+        Root.title("Jeu de Dames - Options")
+        self.newWindow = Toplevel(self.master)
+        self.app = Options(self.newWindow)
+
+class Options(): #Classe représentant le menu des options
+    
+    def __init__(self, master): #Initialisation de l'interface et de la classe
+        self.master = master
+        self.Frame = Frame(master)
+    
+    def Close_Window(self): #Fonction permettant de fermer la fenêtre
+        self.master.destroy()
         
-
-def showTerrain():
-    tableauTemp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    i = 0
-    removeId = 0
-    while i < len(TableauDames):
-        x = 0  
-        while x < 10:
-            if TableauDames[i] == 0:
-                tableauTemp[i - removeId] = "O"
-            elif TableauDames[i] == 1:
-                tableauTemp[i - removeId] = "B"
-            elif TableauDames[i] == 2:
-                tableauTemp[i - removeId] = "W"
-            i += 1
-            x += 1
-        removeId += 10
-        print(tableauTemp)
-
-def showDamier(): #Fonction qui trace un damier
-    x = -100
-    y = -50
-    line = 0
-    while line <= 10: #On boucle tant que toutes les lignes n'ont pas été tracées
-        y = 0
-        if line % 2 == 0: #Si le numéro de ligne est impaire on les places normalement
-            while y < 500: #On boucle tant que l'on a pas fait chacune des lignes
-                while x < 500: #On boucle tant que l'on a pas fini chaque carré d'une ligne
-                    can.create_rectangle(x+50, y, x+100, y + 50, fill='black')
-                    x += 100       
-                x = -100
-                y += 100
-        else: #Sinon on les décales
-            while y < 470: #On boucle tant que l'on a pas fait chacune des lignes
-                while x < 390: #On boucle tant que l'on a pas fini chaque carré d'une ligne
-                    can.create_rectangle(x+100, y+50, x+150, y + 100, fill='black')
-                    x += 100
-                x = -100
-                y += 100
-        line += 1
-        showTerrainFromPionPlace()
-
-def showTerrainFromPionPlace(): 
-    i = 0 
-    x = 0
-    cercleX = -25
-    cercleY = 25    
-    print("--------------------------------------------------")
-    while i < len(TableauDames):
-        x = 0
-        while x < 10:
-            cercleX += 50
-            if TableauDames[i] == 1:
-                cercle(cercleX, cercleY, 20, "yellow")
-            elif TableauDames[i] == 2:
-                cercle(cercleX, cercleY, 20, "green")
-            i += 1
-            x += 1
-        cercleX = -25
-        cercleY += 50
-                
+class Jeu(): #Classe représentant l'interface du jeu de dames
+    
+    def __init__(self, master): #Initialisation de l'interface et de la classe
+        self.master = master
+        self.frame = Frame(master)
         
         
+        self.can = Canvas(self.frame, width = 500, height = 500, bg = "ivory")
+        self.can.pack(side = RIGHT, padx = 0, pady =0)
+        self.can.bind('<Button-1>', self.mouse_down)
         
+        self.GEng = GameEngine(self.can)
+        
+        self.draw_Interface()
+        
+        self.frame.pack()
     
-
-def cercle(x, y, r, coul): #Fonction permettant de tracer un cercle
-    "tracé d ' un cercle de centre (x,y) et de rayon r"
-    can.create_oval(x-r, y-r, x+r, y+r, fill=coul)
+    def draw_Interface(self): #Fonction dessinant l'interface principale
     
-def Reset():
-    TableauDames = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, #0 to 10
-                    1, 0, 1, 0, 1, 0, 1, 0, 1, 0, #10 to 20
-                    0, 1, 0, 1, 0, 1, 0, 1, 0, 1, #20 to 30
-                    1, 0, 1, 0, 1, 0, 1, 0, 1, 0, #30 to 40
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, #40 to 50
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, #50 to 60
-                    0, 2, 0, 2, 0, 2, 0, 2, 0, 2, #60 to 70
-                    2, 0, 2, 0, 2, 0, 2, 0, 2, 0, #70 to 80
-                    0, 2, 0, 2, 0, 2, 0, 2, 0, 2, #80 to 90
-                    2, 0, 2, 0, 2, 0, 2, 0, 2, 0] #90 to 100
+        # -- Affichage du texte --
+        self.Label_Joueur1 = Label(self.frame, text = "-- Joueur 1 --")
+        self.Label_Joueur1.pack()
+        self.Label_NbrPionsJ1 = Label(self.frame, text = "Nombre de pions restants : 20")
+        self.Label_NbrPionsJ1.pack()
+        self.Label_Joueur2 = Label(self.frame, text = "-- Joueur 2 --")
+        self.Label_Joueur2.pack()
+        self.Label_NbrPionsJ2 = Label(self.frame, text = "Nombre de pions restants : 20")
+        self.Label_NbrPionsJ2.pack()
+        
+        #-- Affichage des boutons
+        self.Button_Start = Button(self.frame, text='Démarrer', command = self.GEng.StartGame(2))
+        self.Button_Start.pack(side = BOTTOM, padx =3, pady =3)
+    
+    def mouse_down(self, event): #Fonction s'activant en cas de clic de souris sur l'interface de jeu
+        print("mouse down at : x=", event.x, "y = ", event.y)
+        self.GEng.selectPion_OnClick(event.x, event.y)
+        
+    def Close_Window(): #Fonction permettant de fermer la fenêtre
+        self.master.destroy()
+        
+        
+## -- Programme Principal --
 
-def Tour():
-    teamToPlay = "Black"
-    showTerrain()
-    while True:
-        if teamToPlay == "Black":
-            teamToPlay = "White"
-        else:
-            teamToPlay = "Black"
-        canPlay = True
-        if teamToPlay == "Black":
-            print("L'équipe noire joue !")
-        else:
-            print("L'équipe blanche joue !")
-        while canPlay:
-            idPion = int(input("Entrez l'id du pion a jouer :"))
-            if teamToPlay == "Black":
-                if TableauDames[idPion] != 1:
-                    print("Vous ne pouvez pas jouer ceci !")
-                else:
-                    canPlay = False
-            else:
-                if TableauDames[idPion] != 2:
-                    print("Vous ne pouvez pas jouer ceci !")
-                else:
-                    canPlay = False
-        canPlay = True
-        while canPlay:
-            Direction = input("Entrez la direction DiagDroiteHaut/DiagGaucheHaut/DiagDroiteBas/DiagGaucheBas :")
-            if Direction == "DiagDroiteHaut" or Direction == "DiagGaucheGaut" or Direction == "DiagDroiteBas" or Direction == "DiagGaucheBas":
-                movePion2(idPion, Direction)
-                canPlay = False
-            else:
-                print("Direction inconnue !")
-
-def GetWinner():
-    nbrWhite = 0
-    nbrBlack = 0
-    for i in range(len(TableauDames)):
-        if TableauDames[i] == 1:
-            nbrBlack += 1
-        elif TableauDames[i] == 2:
-            nbrWhite += 1
-    if nbrWhite == 0:
-        print("Black Win !")
-        return "BWin"
-    elif nbrBlack == 0:
-        print("White Win !")
-        return "WWin"
-    else:
-        return False
-
-# -- Programme Principal --
-
-#Initialisation de la fenêtre et du canvas
-fen = Tk()
-can = Canvas(fen, width = 500, height = 500, bg = "ivory")
-can.pack(side = RIGHT, padx = 0, pady =0)
-
-#Initialisation des boutons
-bou1 = Button(fen, text='Démarrer', command = showDamier)
-bou1.pack(side = BOTTOM, padx =3, pady =3)
-#bou2 = Button(fen, text='Placer un pion', command = showTerrainFromPionPlace)
-#bou2.pack(side = RIGHT, padx =3, pady =3)
+Root = Tk() #Variable principale
 
 #Boucle principale
-fen.mainloop()
+cls = MainMenu(Root)
+Root.mainloop()
         
 
         
