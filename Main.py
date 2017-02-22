@@ -70,7 +70,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.Label_NbrPionsJ2.pack()
         
         #-- Affichage des boutons
-        self.Button_Start = Button(self.frame, text='Démarrer', command = self.GEng.StartGame(2))
+        self.Button_Start = Button(self.frame, text='Redémarrer', command = self.GEng.StartGame(2))
         self.Button_Start.pack(side = BOTTOM, padx =3, pady =3)
     
     def mouse_down(self, event): #Fonction s'activant en cas de clic de souris sur l'interface de jeu
