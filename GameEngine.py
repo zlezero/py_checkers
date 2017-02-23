@@ -6,8 +6,6 @@ class Player():
         self.nbrPions = nbrPions
         self.isAi = isAi
         self.Pions = ""
-    
-    
 
 class Pion():
     
@@ -39,33 +37,38 @@ class GameEngine():
     
     def GenerateTableauDames(self):
         
-        PosX = 25
+        PosX = -25
         PosY = 25
         i = 0
         
         while i < 100:
+            PosX += 50
             if i < 10 or (i >= 20 and i < 30):
                 self.TableauDames[i] = Pion("Null", PosX, PosY, "Null", "0")
+                PosX += 50
                 self.TableauDames[i+1] = Pion("Blanc", PosX, PosY, "Pion", "1")
             elif (i >= 10 and i <= 20) or (i >= 30 and i < 40):
                 self.TableauDames[i] = Pion("Blanc", PosX, PosY, "Pion", "1")
+                PosX += 50
                 self.TableauDames[i+1] = Pion("Null", PosX, PosY, "Null", "0")
             elif i >= 40 and i < 60:
                 self.TableauDames[i] = Pion("Null", PosX, PosY, "Null", "0")
+                PosX += 50
                 self.TableauDames[i+1] = Pion("Null", PosX, PosY, "Null", "0")
             elif (i >= 60 and i < 70) or (i >= 80 and i < 90):
                 self.TableauDames[i] = Pion("Null", PosX, PosY, "Null", "0")
+                PosX += 50
                 self.TableauDames[i+1] = Pion("Noir", PosX, PosY, "Pion", "2")
             elif (i >= 70 and i <= 80) or i >= 90:
                 self.TableauDames[i] = Pion("Noir", PosX, PosY, "Pion", "2")
+                PosX += 50
                 self.TableauDames[i+1] = Pion("Null", PosX, PosY, "Null", "0")
-            print("Pos X :", self.TableauDames[i].PosX)
-            print("Pos Y :", self.TableauDames[i].PosY)
+            print("Pos X :", i,  self.TableauDames[i].PosX)
+            print("Pos Y :", i, self.TableauDames[i].PosY)
             i += 2
-            PosX += 50
             if i == 10 or i == 20 or i == 30 or i == 40 or i == 50 or i == 60 or i == 70 or i == 80 or i == 90:
-                PosX = 25
-                PosY += 50
+                PosX =-25
+                #PosY += 50
     
     def GenerateTableauPlayer(self, numberPlayers):
         nombreJoueurs = numberPlayers
@@ -351,8 +354,27 @@ class GameEngine():
         print(self.roundint(PosX, 50))
         print(self.roundint(PosY, 50))
         for i in range(len(self.TableauDames)):
-            if self.roundint(self.TableauDames[i].PosX, 50) == self.roundint(PosX, 50) and self.roundint(self.TableauDames[i].PosY, 50) == self.roundint(PosY, 50):
-                self.canvas.create_rectangle(self.roundint(PosX, 50), self.roundint(PosX) + 50, self.roundint(PosY, 50), self.roundint(PosY, 50) + 50, width = 2, outline = "yellow")
+            if PosX < 25 and PosY < 25:
+                if self.TableauDames[i].PosX == self.roundint(PosX, 25) + 25 and self.TableauDames[i].PosY == self.roundint(PosY, 25) + 25:
+                    print("Pion found at PosX :", PosX, "Pos Y :", PosY, "i :", i)
+            elif PosX < 25:
+                if self.TableauDames[i].PosX == self.roundint(PosX, 25) + 25 and self.TableauDames[i].PosY == self.roundint(PosY, 25):
+                    print("Pion found at PosX :", PosX, "Pos Y :", PosY, "i :", i)
+            elif PosY < 25:
+                if self.TableauDames[i].PosX == self.roundint(PosX, 25) and self.TableauDames[i].PosY == self.roundint(PosY, 25) + 25:  
+                    print("Pion found at PosX :", PosX, "Pos Y :", PosY, "i :", i)
+            else:
+                if self.TableauDames[i].PosX == self.roundint(PosX, 25) and self.TableauDames[i].PosY == self.roundint(PosY, 25): 
+                    print("Pion found at PosX :", PosX, "Pos Y :", PosY, "i :", i)
+ 
+                
+
+                
+                    
+                    
+                    
+                    
+                    # self.canvas.create_rectangle(self.roundint(PosX, 50), self.roundint(PosX) + 50, self.roundint(PosY, 50), self.roundint(PosY, 50) + 50, width = 2, outline = "yellow")
 
     def roundint(self, value, base=5):
         return int(value) - int(value) % int(base)
