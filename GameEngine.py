@@ -20,18 +20,28 @@ class GameEngine():
     
     def __init__(self, canvas):
         
-        self.teamToPlay = "Black"
+        self.teamToPlay = "Blanc"
         self.canvas = canvas        
         self.TableauDames = [None] * 100
         self.TableauJoueurs = [None] * 2
         
+        self.isPionSelect = False
+        self.pionSelect = 99
+        self.CercleChoixPossible = []
+        self.TableauCaseChoixPossible = []
         
     def StartGame(self, nombreJoueurs):
+        print("Start / Restart Game")
+        self.canvas.delete()
         self.GenerateTableauDames()
         self.GenerateTableauPlayer(nombreJoueurs)
         self.Refresh()
     
+    def UpdateGui(self):
+        print("Refresh !")
+    
     def Refresh(self):
+        self.UpdateGui()
         self.showDamier()
         self.showTerrainFromPionPlace()
     
@@ -66,9 +76,10 @@ class GameEngine():
             print("Pos X :", i,  self.TableauDames[i].PosX)
             print("Pos Y :", i, self.TableauDames[i].PosY)
             i += 2
+            
             if i == 10 or i == 20 or i == 30 or i == 40 or i == 50 or i == 60 or i == 70 or i == 80 or i == 90:
                 PosX =-25
-                #PosY += 50
+                PosY += 50
     
     def GenerateTableauPlayer(self, numberPlayers):
         nombreJoueurs = numberPlayers
@@ -80,7 +91,7 @@ class GameEngine():
             self.TableauJoueurs[1] = Player("Joueur 2", 2, 20, False)
     
     
-    def movePion(PionSelect, Direction):
+    def movePion(self, PionSelect, Direction):
         
         pionToMove = PionSelect
         pionDirection = Direction
@@ -119,12 +130,26 @@ class GameEngine():
             return
         
         #Déplacement du pion
+        
         if self.TableauDames[pionToMove + (numberChange)].Status == "Null": #Si l'endroit ou le pion doit aller est vide
-            TempNull = self.TableauDames[pionToMove + (numberChange)]
+        
+            TempV = self.TableauDames[pionToMove + (numberChange)]
+            TempOld = self.TableauDames[pionToMove]
+            
             self.TableauDames[pionToMove + (numberChange)] = self.TableauDames[pionToMove]
-            self.TableauDames[pionToMove] = TempNull
+            
+            self.TableauDames[pionToMove + (numberChange)].PosX = TempV.PosX
+            self.TableauDames[pionToMove + (numberChange)].PosY = TempV.PosY
+            
+            TempV.PosX = TempOld.PosX
+            TempV.PosY = TempOld.PosY
+            
+            self.TableauDames[pionToMove] = TempV
+            
             print("DEBUG : New pos :", pionToMove + (numberChange))
-        elif self.TableauDames[pionToMove + (numberChange)].Equiper == 2 and self.TableauDames[pionToMove].Equipe == 1: #On regarde si on peut prendre un pion
+            
+        elif self.TableauDames[pionToMove + (numberChange)].Equipe == 2 and self.TableauDames[pionToMove].Equipe == 1: #On regarde si on peut prendre un pion
+        
             if self.TableauDames[pionToMove + (numberChange * 2)] == 0: #Si une case est libre après le pion
                 self.TableauDames[pionToMove + (numberChange * 2)] = 1 #On bouge le pion
                 self.TableauDames[pionToMove + (numberChange)] = 0 #On élimine le pion adverse
@@ -133,6 +158,7 @@ class GameEngine():
                 print("Pion pris !")
             else: #Si un emplacement est indisponible on ne peut pas prendre le pion
                 print("Impossible de prendre le pion !")
+                
         elif self.TableauDames[pionToMove + (numberChange)] == 1 and self.TableauDames[pionToMove] == 2:
             if self.TableauDames[pionToMove + (numberChange * 2)] == 0:
                 self.TableauDames[pionToMove + (numberChange * 2)] = 2            
@@ -146,9 +172,7 @@ class GameEngine():
             print("Déplacement impossible !")
         
         
-        
-        self.showTerrain()
-        self.showTerrainFromPionPlace()
+        self.Refresh()
     
     # def movePion(PionSelect, Direction):
     #     
@@ -347,42 +371,109 @@ class GameEngine():
                 x += 1
             removeId += 10
             print(tableauTemp)
-    
-    def selectPion_OnClick(self, PosX, PosY):
-        print(PosX)
-        print(PosY)
-        print(self.roundint(PosX, 50))
-        print(self.roundint(PosY, 50))
-        for i in range(len(self.TableauDames)):
-            if PosX < 25 and PosY < 25:
-                if self.TableauDames[i].PosX == self.roundint(PosX, 25) + 25 and self.TableauDames[i].PosY == self.roundint(PosY, 25) + 25:
-                    print("Pion found at PosX :", PosX, "Pos Y :", PosY, "i :", i)
-            elif PosX < 25:
-                if self.TableauDames[i].PosX == self.roundint(PosX, 25) + 25 and self.TableauDames[i].PosY == self.roundint(PosY, 25):
-                    print("Pion found at PosX :", PosX, "Pos Y :", PosY, "i :", i)
-            elif PosY < 25:
-                if self.TableauDames[i].PosX == self.roundint(PosX, 25) and self.TableauDames[i].PosY == self.roundint(PosY, 25) + 25:  
-                    print("Pion found at PosX :", PosX, "Pos Y :", PosY, "i :", i)
-            else:
-                if self.TableauDames[i].PosX == self.roundint(PosX, 25) and self.TableauDames[i].PosY == self.roundint(PosY, 25): 
-                    print("Pion found at PosX :", PosX, "Pos Y :", PosY, "i :", i)
- 
-                
 
+## Fonctions utilisée lorsque l'on clique 
+
+    def selectPion_OnClick(self, PosX, PosY): #Montre 
+        
+        
+        self.delete("rectangleSelectPion")
+        for i in range(len(self.CercleChoixPossible)):
+            self.canvas.delete(self.CercleChoixPossible[i])
+
+        
+        print("PosX % 100 = ", PosX % 100)
+        print("PosY % 100 = ", PosY % 100)
+        
+        if self.isPionSelect == True:
+            for i in range(len(self.TableauCaseChoixPossible)):
+                if self.TableauCaseChoixPossible[i].PosX == self.roundint(PosX, 50) and self.TableauCaseChoixPossible[i].PosY == self.roundint(PosY, 50):
+                    self.movePion(self.pionSelect, "DiagDroiteBas")
+                # if self.TableauCaseChoixPossible[i].PosX >= self.roundint(PosX, 50) and self.TableauCaseChoixPossible[i].PosY >= self.roundint(PosY, 50):
+                #     self.movePion(self.pionSelect, "DiagDroiteBas")
+                # elif self.TableauCaseChoixPossible[i].PosX <= self.roundint(PosX, 50) and self.TableauCaseChoixPossible[i].PosY >= self.roundint(PosY, 50):
+                #     self.movePion(self.pionSelect, "DiagGaucheBas")
+                # elif self.TableauCaseChoixPossible[i].PosX >= self.roundint(PosX, 50) and self.TableauCaseChoixPossible[i].PosY <= self.roundint(PosY, 50):
+                #     self.movePion(self.pionSelect, "DiagDroiteHaut")
+                # elif self.TableauCaseChoixPossible[i].PosX <= self.roundint(PosX, 50) and self.TableauCaseChoixPossible[i].PosY <= self.roundint(PosY, 50):
+                #     self.movePion(self.pionSelect, "DiagGaucheHaut")
+                    
+            self.isPionSelect = False
+            self.pionSelect = 99
+            return
+            
+        self.pionSelect = 0
+
+        for i in range(len(self.TableauDames)):
+
+            if ((PosX % 100) > 25 and (PosY % 100) > 25) or ((PosX % 100) > 25 and (PosY % 100) < 25):
+                if (self.TableauDames[i].PosX == self.roundint(PosX, 25) or self.TableauDames[i].PosX == self.roundint(PosX, 25) + 25) and (self.TableauDames[i].PosY == self.roundint(PosY, 25) or self.TableauDames[i].PosY == self.roundint(PosY, 25) + 25) and self.TableauDames[i].Couleur == self.teamToPlay:
+                    print("Pion found at PosX :", PosX, "Pos Y :", PosY, "i :", i)
+                    break
+            elif (PosX % 100) < 25 and (PosY % 100) > 25:
+                if self.TableauDames[i].PosX == self.roundint(PosX, 25) + 25 and self.TableauDames[i].PosY == self.roundint(PosY, 25) and self.TableauDames[i].Couleur == self.teamToPlay:
+                    print("Pion found at PosX :", PosX, "Pos Y :", PosY, "i :", i)
+                    break
+            elif (PosY % 100) < 25:
+                if self.TableauDames[i].PosX == self.roundint(PosX, 25) + 25 and self.TableauDames[i].PosY == self.roundint(PosY, 25) + 25 and self.TableauDames[i].Couleur == self.teamToPlay:
+                    print("Pion found at PosX :", PosX, "Pos Y :", PosY, "i :", i)
+                    break
+            if (PosX % 100) < 25:
+                if self.TableauDames[i].PosX == self.roundint(PosX, 25) + 25 and self.TableauDames[i].PosY == self.roundint(PosY, 25) + 25 and self.TableauDames[i].Couleur == self.teamToPlay:
+                    print("Pion found at PosX :", PosX, "Pos Y :", PosY, "i :", i)
+                    break
+            else:
+                if self.TableauDames[i].PosX == self.roundint(PosX, 25) and self.TableauDames[i].PosY == self.roundint(PosY, 25) and self.TableauDames[i].Couleur == self.teamToPlay:
+                    print("Pion found at PosX :", PosX, "Pos Y :", PosY, "i :", i)
+                    break
+                    
+        if i == 99:
+            self.pionSelect = 101
+            self.isPionSelect = False
+        
+        if self.pionSelect < 101 and self.TableauDames[i].Status != "Null":            
+            self.pionSelect = i
+            print("Pion select :", i)
+            self.isPionSelect = True
+            
+            self.canvas.create_rectangle(self.roundint(PosX, 50), self.roundint(PosY, 50), self.roundint(PosX, 50) + 50, self.roundint(PosY, 50) + 50 , outline = "yellow", width = 3, tags = "rectangleSelectPion")
+            
+            self.showPlaceToGo(self.pionSelect)
+        
+        
+    def showPlaceToGo(self, pionSelect): #Montre les endroits possibles sur le damier
+        
+        pionSelect = self.pionSelect
+        
+        if self.TableauDames[pionSelect].Equipe == "1":
+            numberChange1 = 11
+            numberChange2 = 9
+            
+            if self.TableauDames[pionSelect + numberChange1].Status == "Null" and pionSelect != [9, 10, 29, 30, 49, 50, 69, 70, 89, 90]:
+
+                self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + numberChange1].PosX - 5, self.TableauDames[pionSelect + numberChange1].PosY - 5,           self.TableauDames[pionSelect + numberChange1].PosX + 5, self.TableauDames[pionSelect + numberChange1].PosY + 5, fill= "yellow"))
                 
-                    
-                    
-                    
-                    
-                    # self.canvas.create_rectangle(self.roundint(PosX, 50), self.roundint(PosX) + 50, self.roundint(PosY, 50), self.roundint(PosY, 50) + 50, width = 2, outline = "yellow")
+                self.TableauCaseChoixPossible.append(self.TableauDames[pionSelect + numberChange1])
+                                
+            if self.TableauDames[pionSelect + numberChange2].Status == "Null" and pionSelect != [9, 29, 49, 69, 89]:
+                
+               self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + numberChange2].PosX - 5, self.TableauDames[pionSelect + numberChange2].PosY - 5, self.TableauDames[pionSelect + numberChange2].PosX + 5, self.TableauDames[pionSelect + numberChange2].PosY + 5, fill= "yellow"))
+               
+               self.TableauCaseChoixPossible.append(self.TableauDames[pionSelect + numberChange2])
+
+        #self.movePion(pionSelect, "DiagDroiteBas")
 
     def roundint(self, value, base=5):
         return int(value) - int(value) % int(base)
+    
+    def delete(self, MonTag):
+        self.canvas.delete(self.canvas.find_withtag(MonTag))
+        
 # --- Fonctions Graphiques ---
 
-    def cercle(self, x, y, r, coul): #Fonction permettant de tracer un cercle
+    def cercle(self, x, y, r, coul, tagsC = "cercle"): #Fonction permettant de tracer un cercle
         "tracé d ' un cercle de centre (x,y) et de rayon r"
-        self.canvas.create_oval(x-r, y-r, x+r, y+r, fill=coul)
+        self.canvas.create_oval(x-r, y-r, x+r, y+r, fill=coul, tags="cercleChoixPos")
     
     def Rectangle(self, x, y, coul): #Fonction permettant de tracer un rectangle
         self.canvas.create_rectangle(x + 20, x+20, y + 20, y+20, outline=coul)

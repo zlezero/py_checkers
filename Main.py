@@ -56,6 +56,8 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.draw_Interface()
         
         self.frame.pack()
+        
+        self.GEng.StartGame(2)
     
     def draw_Interface(self): #Fonction dessinant l'interface principale
     
@@ -70,13 +72,18 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.Label_NbrPionsJ2.pack()
         
         #-- Affichage des boutons
-        self.Button_Start = Button(self.frame, text='Redémarrer', command = self.GEng.StartGame(2))
-        self.Button_Start.pack(side = BOTTOM, padx =3, pady =3)
+        self.Button_Restart = Button(self.frame, text='Redémarrer', command = self.Restart_Game())
+        self.Button_Restart.pack(side = BOTTOM, padx =3, pady =3)
     
     def mouse_down(self, event): #Fonction s'activant en cas de clic de souris sur l'interface de jeu
-        print("mouse down at : x=", event.x, "y = ", event.y)
+        print("Mouse down at : x=", event.x, "y = ", event.y)
         self.GEng.selectPion_OnClick(event.x, event.y)
-        
+    
+    def Restart_Game(self):
+        print("Restarting game !") 
+        self.can.delete()
+
+    
     def Close_Window(): #Fonction permettant de fermer la fenêtre
         self.master.destroy()
         
