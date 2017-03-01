@@ -1,3 +1,5 @@
+from tkinter import messagebox
+
 class Player():
     
     def __init__(self, NomJoueur, Equipe, nbrPions, isAi):
@@ -18,18 +20,20 @@ class Pion():
         
 class GameEngine():
     
-    def __init__(self, canvas):
+    def __init__(self, canvas, texte):
         
-        self.teamToPlay = "Blanc"
+        self.teamToPlay = "Noir"
         self.canvas = canvas        
         self.TableauDames = [None] * 100
         self.TableauJoueurs = [None] * 2
+        
+        self.Texte = texte
         
         self.isPionSelect = False
         self.pionSelect = 99
         self.CercleChoixPossible = []
         self.TableauCaseChoixPossible = []
-        
+    
     def StartGame(self, nombreJoueurs):
         print("Start / Restart Game")
         self.canvas.delete()
@@ -37,14 +41,28 @@ class GameEngine():
         self.GenerateTableauPlayer(nombreJoueurs)
         self.Refresh()
     
-    def UpdateGui(self):
+    def UpdateGui(self):        
         print("Refresh !")
     
     def Refresh(self):
         self.UpdateGui()
         self.showDamier()
         self.showTerrainFromPionPlace()
+        self.Tour(True)
     
+    
+    def Tour(self, newTurn):
+        if self.TableauJoueurs[0].nbrPions == 0:
+            messagebox.showinfo("Gagné !!!", "J2 Won")
+        elif self.TableauJoueurs[1].nbrPions == 0:
+            messagebox.showinfo("Gagné !!!", "J1 Won")
+            
+        if newTurn == True:
+            if self.teamToPlay == "Blanc":
+                self.teamToPlay = "Noir"
+            else:
+                self.teamToPlay = "Blanc"
+
     def GenerateTableauDames(self):
         
         PosX = -25
@@ -154,8 +172,10 @@ class GameEngine():
                 self.TableauDames[pionToMove + (numberChange * 2)] = 1 #On bouge le pion
                 self.TableauDames[pionToMove + (numberChange)] = 0 #On élimine le pion adverse
                 self.TableauDames[pionToMove] = 0 #On supprime le pion de son emplacement d'origine
+                
                 print("DEBUG : New pos :", pionToMove + (numberChange * 2))
                 print("Pion pris !")
+                
             else: #Si un emplacement est indisponible on ne peut pas prendre le pion
                 print("Impossible de prendre le pion !")
                 
@@ -170,82 +190,11 @@ class GameEngine():
                 print("Impossible de prendre le pion !")
         else:
             print("Déplacement impossible !")
+            return
+        
         
         
         self.Refresh()
-    
-    # def movePion(PionSelect, Direction):
-    #     
-    #     pionToMove = PionSelect
-    #     pionDirection = Direction
-    #     numberChange = 0
-    #     
-    #     #On vérifie si le pion existe
-    #     if self.TableauDames[pionToMove].Status == "Null":
-    #         print("Pion inexistant !")
-    #         return
-    #     
-    #     #On vérifie si le pion peut se déplacer s'il est au bord du damier
-    #     if pionToMove == 10 or pionToMove == 30 or pionToMove == 50 or pionToMove == 70 or pionToMove == 90:
-    #         if pionDirection == "DiagGaucheBas" or pionDirection == "DiagGaucheHaut":
-    #             print("Déplacement impossible bord du damier !")
-    #             return
-    #     elif pionToMove == 9 or pionToMove == 29 or pionToMove == 49 or pionToMove == 69 or pionToMove == 89:
-    #         if pionDirection == "DiagDroiteBas" or pionDirection == "DiagDroiteHaut":
-    #             print("Déplacement impossible bord du damier !")
-    #             return
-    #         
-    #     #On change le nombre de case selon la direction
-    #     if pionDirection == "DiagDroiteBas":
-    #         print("Déplacement : Diagonale Droite Bas")
-    #         numberChange = 11
-    #     elif pionDirection == "DiagGaucheBas":
-    #         print("Déplacement : Diagonale Gauche Bas")
-    #         numberChange = 9
-    #     elif pionDirection == "DiagDroiteHaut":
-    #         print("Déplacement : Diagonale Droite Haut")
-    #         numberChange = -9
-    #     elif pionDirection == "DiagGaucheHaut":
-    #         print("Déplacement : Diagonale Gauche Haut")
-    #         numberChange = -11
-    #     else:
-    #         print("Direction inconnue !")
-    #         return
-    #     
-    #     #Déplacement du pion
-    #     if self.TableauDames[pionToMove + (numberChange)].Status == "Null": #Si l'endroit ou le pion doit aller est vide
-    #         if self.TableauDames[pionToMove].Equipe == 1: #On bouge le pion en fonction de son équipe
-    #             self.TableauDames[pionToMove + (numberChange)] = self.TableauDames[pionToMove]
-    #         else:
-    #             self.TableauDames[pionToMove + (numberChange)] = 2
-    #         self.TableauDames[pionToMove] = 0
-    #         print("DEBUG : New pos :", pionToMove + (numberChange))
-    #     elif self.TableauDames[pionToMove + (numberChange)] == 2 and self.TableauDames[pionToMove] == 1: #On regarde si on peut prendre un pion
-    #         if self.TableauDames[pionToMove + (numberChange * 2)] == 0: #Si une case est libre après le pion
-    #             self.TableauDames[pionToMove + (numberChange * 2)] = 1 #On bouge le pion
-    #             self.TableauDames[pionToMove + (numberChange)] = 0 #On élimine le pion adverse
-    #             self.TableauDames[pionToMove] = 0 #On supprime le pion de son emplacement d'origine
-    #             print("DEBUG : New pos :", pionToMove + (numberChange * 2))
-    #             print("Pion pris !")
-    #         else: #Si un emplacement est indisponible on ne peut pas prendre le pion
-    #             print("Impossible de prendre le pion !")
-    #     elif self.TableauDames[pionToMove + (numberChange)] == 1 and self.TableauDames[pionToMove] == 2:
-    #         if self.TableauDames[pionToMove + (numberChange * 2)] == 0:
-    #             self.TableauDames[pionToMove + (numberChange * 2)] = 2            
-    #             self.TableauDames[pionToMove + (numberChange)] = 0
-    #             self.TableauDames[pionToMove] = 0
-    #             print("DEBUG : New pos :", pionToMove + (numberChange * 2))
-    #             print("Pion pris !")
-    #         else:
-    #             print("Impossible de prendre le pion !")
-    #     else:
-    #         print("Déplacement impossible !")
-    #     
-    #     
-    #     
-    #     self.showTerrain()
-    #     self.showTerrainFromPionPlace()
-    
     
     def showTerrainFromPionPlace(self): #Fonction qui affiche les pions en fonction du tableau
         i = 0 
@@ -306,75 +255,12 @@ class GameEngine():
                              2, 0, 2, 0, 2, 0, 2, 0, 2, 0, #70 to 80
                              0, 2, 0, 2, 0, 2, 0, 2, 0, 2, #80 to 90
                              2, 0, 2, 0, 2, 0, 2, 0, 2, 0] #90 to 100
-    
-    def Tour():
-        teamToPlay = "Black"
-        showTerrain()
-        x = 0
-        while x == 0:
-            if teamToPlay == "Black":
-                teamToPlay = "White"
-            else:
-                teamToPlay = "Black"
-            canPlay = True
-            if teamToPlay == "Black":
-                print("L'équipe noire joue !")
-            else:
-                print("L'équipe blanche joue !")
-            while canPlay:
-                idPion = int(input("Entrez l'id du pion a jouer :"))
-                if teamToPlay == "Black":
-                    if self.TableauDames[idPion] != 1:
-                        print("Vous ne pouvez pas jouer ceci !")
-                    else:
-                        canPlay = False
-                else:
-                    if self.TableauDames[idPion] != 2:
-                        print("Vous ne pouvez pas jouer ceci !")
-                    else:
-                        canPlay = False
-            canPlay = True
-            while canPlay:
-                Direction = input("Entrez la direction DiagDroiteHaut/DiagGaucheHaut/DiagDroiteBas/DiagGaucheBas :")
-                if Direction == "DiagDroiteHaut" or Direction == "DiagGaucheGaut" or Direction == "DiagDroiteBas" or Direction == "DiagGaucheBas":
-                    movePion(idPion, Direction)
-                    canPlay = False
-                    showTerrainFromPionPlace()
-                    x = 1
-                else:
-                    print("Direction inconnue !")
-    
-    def GetWinner(self):
-        if self.TableauJoueurs[0].nbrPions == 0:
-            return "2Win"
-        elif self.TableauJoueurs[1].nbrPions == 0:
-            return "1Win"
-        else:
-            return "NoWinner"
-        
-            
-    
-    def showTerrain():
-        tableauTemp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        i = 0
-        removeId = 0
-        while i < len(self.TableauDames):
-            x = 0  
-            while x < 10:
-                if self.TableauDames[i] == 0:
-                    tableauTemp[i - removeId] = "O"
-                elif self.TableauDames[i] == 1:
-                    tableauTemp[i - removeId] = "B"
-                elif self.TableauDames[i] == 2:
-                    tableauTemp[i - removeId] = "W"
-                i += 1
-                x += 1
-            removeId += 10
-            print(tableauTemp)
+
+
 
 ## Fonctions utilisée lorsque l'on clique 
 
-    def selectPion_OnClick(self, PosX, PosY): #Montre 
+    def selectPion_OnClick(self, PosX, PosY): 
         
         
         self.delete("rectangleSelectPion")
@@ -387,17 +273,85 @@ class GameEngine():
         
         if self.isPionSelect == True:
             for i in range(len(self.TableauCaseChoixPossible)):
-                if self.TableauCaseChoixPossible[i].PosX == self.roundint(PosX, 50) and self.TableauCaseChoixPossible[i].PosY == self.roundint(PosY, 50):
-                    self.movePion(self.pionSelect, "DiagDroiteBas")
-                # if self.TableauCaseChoixPossible[i].PosX >= self.roundint(PosX, 50) and self.TableauCaseChoixPossible[i].PosY >= self.roundint(PosY, 50):
-                #     self.movePion(self.pionSelect, "DiagDroiteBas")
-                # elif self.TableauCaseChoixPossible[i].PosX <= self.roundint(PosX, 50) and self.TableauCaseChoixPossible[i].PosY >= self.roundint(PosY, 50):
-                #     self.movePion(self.pionSelect, "DiagGaucheBas")
-                # elif self.TableauCaseChoixPossible[i].PosX >= self.roundint(PosX, 50) and self.TableauCaseChoixPossible[i].PosY <= self.roundint(PosY, 50):
-                #     self.movePion(self.pionSelect, "DiagDroiteHaut")
-                # elif self.TableauCaseChoixPossible[i].PosX <= self.roundint(PosX, 50) and self.TableauCaseChoixPossible[i].PosY <= self.roundint(PosY, 50):
-                #     self.movePion(self.pionSelect, "DiagGaucheHaut")
-                    
+                if ((PosX % 100) > 25 and (PosY % 100) > 25) or ((PosX % 100) > 25 and (PosY % 100) < 25):
+                    if (self.TableauCaseChoixPossible[i].PosX == self.roundint(PosX, 25) or self.TableauCaseChoixPossible[i].PosX == self.roundint(PosX, 25) + 25):
+                        if self.TableauCaseChoixPossible[i].PosX % 100 < PosX % 100 and self.TableauCaseChoixPossible[i].PosY % 100 > PosY % 100:
+                            self.movePion(self.pionSelect, "DiagGaucheBas")
+                            break
+                        elif self.TableauCaseChoixPossible[i].PosX % 100 < PosX % 100 and self.TableauCaseChoixPossible[i].PosY % 100 < PosY % 100:
+                            self.movePion(self.pionSelect, "DiagGaucheHaut")
+                            break
+                        elif self.TableauCaseChoixPossible[i].PosX % 100 > PosX % 100 and self.TableauCaseChoixPossible[i].PosY % 100 > PosY % 100:
+                            self.movePion(self.pionSelect, "DiagDroiteBas")
+                            break
+                        elif self.TableauCaseChoixPossible[i].PosX % 100 > PosX % 100 and self.TableauCaseChoixPossible[i].PosY % 100 < PosY % 100:
+                            self.movePion(self.pionSelect, "DiagDroiteHaut")
+                            break
+                       
+                            
+                elif (PosX % 100) < 25 and (PosY % 100) > 25:
+                    if ((PosX % 100) > 25 and (PosY % 100) > 25) or ((PosX % 100) > 25 and (PosY % 100) < 25):
+                        if (self.TableauCaseChoixPossible[i].PosX == self.roundint(PosX, 25) or self.TableauCaseChoixPossible[i].PosX == self.roundint(PosX, 25) + 25):
+                            if self.TableauCaseChoixPossible[i].PosX % 100 < PosX % 100 and self.TableauCaseChoixPossible[i].PosY % 100 > PosY % 100:
+                                self.movePion(self.pionSelect, "DiagGaucheBas")
+                                break
+                            elif self.TableauCaseChoixPossible[i].PosX % 100 < PosX % 100 and self.TableauCaseChoixPossible[i].PosY % 100 < PosY % 100:
+                                self.movePion(self.pionSelect, "DiagGaucheHaut")
+                                break
+                            elif self.TableauCaseChoixPossible[i].PosX % 100 > PosX % 100 and self.TableauCaseChoixPossible[i].PosY % 100 > PosY % 100:
+                                self.movePion(self.pionSelect, "DiagDroiteBas")
+                                break
+                            elif self.TableauCaseChoixPossible[i].PosX % 100 > PosX % 100 and self.TableauCaseChoixPossible[i].PosY % 100 < PosY % 100:
+                                self.movePion(self.pionSelect, "DiagDroiteHaut")
+                                break
+                elif (PosY % 100) < 25:
+                    if ((PosX % 100) > 25 and (PosY % 100) > 25) or ((PosX % 100) > 25 and (PosY % 100) < 25):
+                        if (self.TableauCaseChoixPossible[i].PosX == self.roundint(PosX, 25) or self.TableauCaseChoixPossible[i].PosX == self.roundint(PosX, 25) + 25):
+                            if self.TableauCaseChoixPossible[i].PosX % 100 < PosX % 100 and self.TableauCaseChoixPossible[i].PosY % 100 > PosY % 100:
+                                self.movePion(self.pionSelect, "DiagGaucheBas")
+                                break
+                            elif self.TableauCaseChoixPossible[i].PosX % 100 < PosX % 100 and self.TableauCaseChoixPossible[i].PosY % 100 < PosY % 100:
+                                self.movePion(self.pionSelect, "DiagGaucheHaut")
+                                break
+                            elif self.TableauCaseChoixPossible[i].PosX % 100 > PosX % 100 and self.TableauCaseChoixPossible[i].PosY % 100 > PosY % 100:
+                                self.movePion(self.pionSelect, "DiagDroiteBas")
+                                break
+                            elif self.TableauCaseChoixPossible[i].PosX % 100 > PosX % 100 and self.TableauCaseChoixPossible[i].PosY % 100 < PosY % 100:
+                                self.movePion(self.pionSelect, "DiagDroiteHaut")
+                                break
+                if (PosX % 100) < 25:
+                    if ((PosX % 100) > 25 and (PosY % 100) > 25) or ((PosX % 100) > 25 and (PosY % 100) < 25):
+                        if (self.TableauCaseChoixPossible[i].PosX == self.roundint(PosX, 25) or self.TableauCaseChoixPossible[i].PosX == self.roundint(PosX, 25) + 25):
+                            if self.TableauCaseChoixPossible[i].PosX % 100 < PosX % 100 and self.TableauCaseChoixPossible[i].PosY % 100 > PosY % 100:
+                                self.movePion(self.pionSelect, "DiagGaucheBas")
+                                break
+                            elif self.TableauCaseChoixPossible[i].PosX % 100 < PosX % 100 and self.TableauCaseChoixPossible[i].PosY % 100 < PosY % 100:
+                                self.movePion(self.pionSelect, "DiagGaucheHaut")
+                                break
+                            elif self.TableauCaseChoixPossible[i].PosX % 100 > PosX % 100 and self.TableauCaseChoixPossible[i].PosY % 100 > PosY % 100:
+                                self.movePion(self.pionSelect, "DiagDroiteBas")
+                                break
+                            elif self.TableauCaseChoixPossible[i].PosX % 100 > PosX % 100 and self.TableauCaseChoixPossible[i].PosY % 100 < PosY % 100:
+                                self.movePion(self.pionSelect, "DiagDroiteHaut")
+                                break
+                else:
+                    if ((PosX % 100) > 25 and (PosY % 100) > 25) or ((PosX % 100) > 25 and (PosY % 100) < 25):
+                        if (self.TableauCaseChoixPossible[i].PosX == self.roundint(PosX, 25) or self.TableauCaseChoixPossible[i].PosX == self.roundint(PosX, 25) + 25):
+                            if self.TableauCaseChoixPossible[i].PosX % 100 < PosX % 100 and self.TableauCaseChoixPossible[i].PosY % 100 > PosY % 100:
+                                self.movePion(self.pionSelect, "DiagGaucheBas")
+                                break
+                            elif self.TableauCaseChoixPossible[i].PosX % 100 < PosX % 100 and self.TableauCaseChoixPossible[i].PosY % 100 < PosY % 100:
+                                self.movePion(self.pionSelect, "DiagGaucheHaut")
+                                break
+                            elif self.TableauCaseChoixPossible[i].PosX % 100 > PosX % 100 and self.TableauCaseChoixPossible[i].PosY % 100 > PosY % 100:
+                                self.movePion(self.pionSelect, "DiagDroiteBas")
+                                break
+                            elif self.TableauCaseChoixPossible[i].PosX % 100 > PosX % 100 and self.TableauCaseChoixPossible[i].PosY % 100 < PosY % 100:
+                                self.movePion(self.pionSelect, "DiagDroiteHaut")
+                                break
+
+
+                
             self.isPionSelect = False
             self.pionSelect = 99
             return
@@ -445,23 +399,31 @@ class GameEngine():
         
         pionSelect = self.pionSelect
         
+        #listeInterdit = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100]
+        listeInterdit = [0, 2, 4, 6, 8, 11, 13, 15, 17, 19, 20, 22, 24, 26, 28, 31, 33, 35, 37, 39, 40, 42, 44, 46, 48, 51, 53, 55, 57, 59, 60, 62, 64, 66, 68, 71, 73, 75, 77, 79, 80, 82, 84, 86, 88, 91, 93, 95, 97, 99]
+        
+        self.CercleChoixPossible = []
+
         if self.TableauDames[pionSelect].Equipe == "1":
+            numberChange2 = 9           
             numberChange1 = 11
-            numberChange2 = 9
+
+        elif self.TableauDames[pionSelect].Equipe == "2":
+            numberChange1 = -9
+            numberChange2 = -11
             
-            if self.TableauDames[pionSelect + numberChange1].Status == "Null" and pionSelect != [9, 10, 29, 30, 49, 50, 69, 70, 89, 90]:
+        if self.TableauDames[pionSelect + (numberChange1)].Status == "Null" and (pionSelect + numberChange1) not in listeInterdit:
 
-                self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + numberChange1].PosX - 5, self.TableauDames[pionSelect + numberChange1].PosY - 5,           self.TableauDames[pionSelect + numberChange1].PosX + 5, self.TableauDames[pionSelect + numberChange1].PosY + 5, fill= "yellow"))
+            self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + (numberChange1)].PosX - 5, self.TableauDames[pionSelect + (numberChange1)].PosY - 5,           self.TableauDames[pionSelect + (numberChange1)].PosX + 5, self.TableauDames[pionSelect + (numberChange1)].PosY + 5, fill= "yellow"))
                 
-                self.TableauCaseChoixPossible.append(self.TableauDames[pionSelect + numberChange1])
+            self.TableauCaseChoixPossible.append(self.TableauDames[pionSelect + (numberChange1)])
                                 
-            if self.TableauDames[pionSelect + numberChange2].Status == "Null" and pionSelect != [9, 29, 49, 69, 89]:
+        if self.TableauDames[pionSelect + (numberChange2)].Status == "Null" and (pionSelect + numberChange2) not in listeInterdit:
                 
-               self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + numberChange2].PosX - 5, self.TableauDames[pionSelect + numberChange2].PosY - 5, self.TableauDames[pionSelect + numberChange2].PosX + 5, self.TableauDames[pionSelect + numberChange2].PosY + 5, fill= "yellow"))
+            self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + (numberChange2)].PosX - 5, self.TableauDames[pionSelect + (numberChange2)].PosY - 5, self.TableauDames[pionSelect + (numberChange2)].PosX + 5, self.TableauDames[pionSelect + (numberChange2)].PosY + 5, fill= "yellow"))
                
-               self.TableauCaseChoixPossible.append(self.TableauDames[pionSelect + numberChange2])
+            self.TableauCaseChoixPossible.append(self.TableauDames[pionSelect + (numberChange2)])
 
-        #self.movePion(pionSelect, "DiagDroiteBas")
 
     def roundint(self, value, base=5):
         return int(value) - int(value) % int(base)

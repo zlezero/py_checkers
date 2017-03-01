@@ -51,24 +51,30 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.can.pack(side = RIGHT, padx = 0, pady =0)
         self.can.bind('<Button-1>', self.mouse_down)
         
-        self.GEng = GameEngine(self.can)
-        
-        self.draw_Interface()
+        self.GEng = GameEngine(self.can, self.draw_Interface())
         
         self.frame.pack()
         
         self.GEng.StartGame(2)
     
     def draw_Interface(self): #Fonction dessinant l'interface principale
-    
+        
+        #Stockage du texte
+        
+        self.nbrPionsRestantsJ1_Text = "Nombre de pions restants : 20"
+        self.nbrPionsRestantsJ2_Text = "Nombre de pions restants : 20"
+        
+        Texte.append(self.nbrPionsRestantsJ1_Text)
+        Texte.append(self.nbrPionsRestantsJ2_Text)
+        
         # -- Affichage du texte --
         self.Label_Joueur1 = Label(self.frame, text = "-- Joueur 1 --")
         self.Label_Joueur1.pack()
-        self.Label_NbrPionsJ1 = Label(self.frame, text = "Nombre de pions restants : 20")
+        self.Label_NbrPionsJ1 = Label(self.frame, text = self.nbrPionsRestants_Text)
         self.Label_NbrPionsJ1.pack()
         self.Label_Joueur2 = Label(self.frame, text = "-- Joueur 2 --")
         self.Label_Joueur2.pack()
-        self.Label_NbrPionsJ2 = Label(self.frame, text = "Nombre de pions restants : 20")
+        self.Label_NbrPionsJ2 = Label(self.frame, text = self.nbrPionsRestantsJ2_Text)
         self.Label_NbrPionsJ2.pack()
         
         #-- Affichage des boutons
