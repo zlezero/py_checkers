@@ -45,10 +45,10 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
     def __init__(self, master): #Initialisation de l'interface et de la classe
         self.master = master
         self.frame = Frame(master)
-        
-        
+             
         self.can = Canvas(self.frame, width = 500, height = 500, bg = "ivory")
         self.can.pack(side = RIGHT, padx = 0, pady =0)
+
         self.can.bind('<Button-1>', self.mouse_down)
         
         self.GEng = GameEngine(self.can, self.draw_Interface())
@@ -63,24 +63,29 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         
         self.nbrPionsRestantsJ1_Text = "Nombre de pions restants : 20"
         self.nbrPionsRestantsJ2_Text = "Nombre de pions restants : 20"
+        self.tourActuel = "Equipe qui joue : Blanc"
         
-        Texte.append(self.nbrPionsRestantsJ1_Text)
-        Texte.append(self.nbrPionsRestantsJ2_Text)
+        #Texte.append(self.nbrPionsRestantsJ1_Text)
+        #Texte.append(self.nbrPionsRestantsJ2_Text)
         
         # -- Affichage du texte --
         self.Label_Joueur1 = Label(self.frame, text = "-- Joueur 1 --")
         self.Label_Joueur1.pack()
-        self.Label_NbrPionsJ1 = Label(self.frame, text = self.nbrPionsRestants_Text)
+        self.Label_NbrPionsJ1 = Label(self.frame, text = self.nbrPionsRestantsJ1_Text)
         self.Label_NbrPionsJ1.pack()
         self.Label_Joueur2 = Label(self.frame, text = "-- Joueur 2 --")
         self.Label_Joueur2.pack()
         self.Label_NbrPionsJ2 = Label(self.frame, text = self.nbrPionsRestantsJ2_Text)
         self.Label_NbrPionsJ2.pack()
+        self.Label_TourActuel = Label(self.frame, text = self.tourActuel)
+        self.Label_TourActuel.pack()
         
         #-- Affichage des boutons
         self.Button_Restart = Button(self.frame, text='Redémarrer', command = self.Restart_Game())
         self.Button_Restart.pack(side = BOTTOM, padx =3, pady =3)
-    
+        self.Button_SkipTour = Button(self.frame, text='Passer le tour', command = self.Skip_Turn())
+        self.Button_SkipTour.pack(side = BOTTOM, padx =5, pady =5)
+
     def mouse_down(self, event): #Fonction s'activant en cas de clic de souris sur l'interface de jeu
         print("Mouse down at : x=", event.x, "y = ", event.y)
         self.GEng.selectPion_OnClick(event.x, event.y)
@@ -88,6 +93,10 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
     def Restart_Game(self):
         print("Restarting game !") 
         self.can.delete()
+
+    def Skip_Turn(self):
+        print("lul")
+        #self.GEng.Tour(True)
 
     
     def Close_Window(): #Fonction permettant de fermer la fenêtre
