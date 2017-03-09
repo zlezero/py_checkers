@@ -39,6 +39,9 @@ class GameEngine():
 
     def StartGame(self, nombreJoueurs):
         print("Start / Restart Game")
+
+        self.teamToPlay = "Noir"
+
         self.canvas.delete()
         self.GenerateTableauDames()
         self.GenerateTableauPlayer(nombreJoueurs)
@@ -396,7 +399,7 @@ class GameEngine():
             numberChange1 = -9
             numberChange2 = -11
         
-        if pionSelect + (numberChange1) < 100 or pionSelect + (numberChange2) < 100:
+        if pionSelect + (numberChange1) < 100 or pionSelect + (numberChange2) < 100 and pionSelect + (numberChange1) > 1 or pionSelect + (numberChange2) > 1:
             if self.TableauDames[pionSelect + (numberChange1)].Status == "Null" and (pionSelect + numberChange1) not in listeInterdit: #Si la case est vide
 
                 self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + (numberChange1)].PosX - 5, self.TableauDames[pionSelect + (numberChange1)].PosY - 5,  self.TableauDames[pionSelect + (numberChange1)].PosX + 5, self.TableauDames[pionSelect + (numberChange1)].PosY + 5, fill= "yellow"))
@@ -410,7 +413,7 @@ class GameEngine():
                 self.TableauCaseChoixPossible.append(pionSelect + (numberChange2))
 
             for i in listeCheck:
-                if pionSelect + (i * 2) < 100:
+                if pionSelect + (i * 2) < 100 and pionSelect + (i * 2) > 1:
                     if self.TableauDames[pionSelect + (i)].Status == "Pion" and self.TableauDames[pionSelect + (i * 2)].Status == "Null" and self.TableauDames[pionSelect + (i)].Equipe != self.TableauDames[pionSelect].Equipe and pionSelect + (i) not in listeInterdit and pionSelect + (i * 2) not in listeInterdit:
                         self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + (i * 2)].PosX - 5, self.TableauDames[pionSelect + (i * 2)].PosY - 5, self.TableauDames[pionSelect + (i * 2)].PosX + 5, self.TableauDames[pionSelect + (i * 2)].PosY + 5, fill= "yellow"))
                         self.TableauCaseChoixPossible.append(pionSelect + (i * 2))
