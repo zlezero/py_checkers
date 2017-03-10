@@ -7,7 +7,7 @@ Label_NbrPionsJ1 = None
 Label_NbrPionsJ2 = None
 Label_TourActuel = None
 Label_Timer = None
-timeLeft = 19000
+timeLeft = 180000
 
 ## -- Toutes les différentes GUI --
 
@@ -93,12 +93,15 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.can.pack(side = RIGHT, padx = 0, pady =0)
 
         self.can.bind('<Button-1>', self.mouse_down)
-        timeLeft = 19000
-        self.Update_Timer()
-        self.GEng = GameEngine(self.can, self.draw_Interface())
+
+        self.draw_Interface()
+
+        self.GEng = GameEngine(self.can)
         
         self.frame.pack()
-        
+
+        self.Update_Timer()
+
         if self.nbrJoueurs == 1:
             self.GEng.StartGame(1)
         else:
@@ -106,13 +109,13 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
     
     def draw_Interface(self): #Fonction dessinant l'interface principale
         
-        global Label_NbrPionsJ1, Label_NbrPionsJ2, Label_TourActuel, timeLeft
+        global Label_NbrPionsJ1, Label_NbrPionsJ2, Label_TourActuel, timeLeft, Label_Timer
         
         #Stockage du texte
         
         self.nbrPionsRestantsJ1_Text = "Nombre de pions restants : 20"
         self.nbrPionsRestantsJ2_Text = "Nombre de pions restants : 20"
-        self.tourActuel = "Equipe qui joue : Blanc"
+        self.tourActuel = "Equipe jouant : Blanc"
         
         #Texte.append(self.nbrPionsRestantsJ1_Text)
         #Texte.append(self.nbrPionsRestantsJ2_Text)
@@ -130,7 +133,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.Label_Séparation.pack()
         Label_TourActuel = Label(self.frame, text = self.tourActuel)
         Label_TourActuel.pack()
-        Label_Timer = Label(self.frame, text = "Temps restant : {}".format(timeLeft))
+        Label_Timer = Label(self.frame, text = "Temps restant : {}.{}".format(self.ConvertTime(timeLeft, False), self.ConvertTime(timeLeft, True)))
         Label_Timer.pack(pady = 10)
         
         #-- Affichage des boutons
@@ -175,10 +178,18 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.master.destroy()
 
     def Update_Timer(self):
-        global timeLeft
-
-        timeLeft -= 100
-        self.master.after(100, self.Update_Timer)
+        global timeLeft, Label_Timer
+        if timeLeft <= 0:
+            self.Skip_Turn()
+        timeLeft -= 1000
+        Label_Timer.config(text = "Temps restant : {}.{}".format(self.ConvertTime(timeLeft, False), self.ConvertTime(timeLeft, True)))
+        Label_Timer.after(1000, self.Update_Timer)
+    
+    def ConvertTime(self, timeLeft, toSeconds):
+        if toSeconds == True:
+            return int((timeLeft/1000)%60)
+        else:
+            return int((timeLeft/(1000*60))%60)
 
 class Player():
     
@@ -200,15 +211,13 @@ class Case():
         
 class GameEngine():
     
-    def __init__(self, canvas, texte):
+    def __init__(self, canvas):
         
         self.teamToPlay = "Noir"
         self.canvas = canvas        
         self.TableauDames = [None] * 100
         self.TableauJoueurs = [None] * 2
-        
-        self.Texte = texte
-        
+                
         self.isPionSelect = False
         self.pionSelect = 99
         self.CercleChoixPossible = []
@@ -220,24 +229,24 @@ class GameEngine():
         self.BlancSkip = True
         self.NoirSkip = True
 
-    def StartGame(self, nombreJoueurs):
+    def StartGame(self, nombreJoueurs): #Fonction se lançant au début de la partie
         print("Start / Restart Game")
 
         self.teamToPlay = "Noir"
         
         self.canvas.delete()
-        self.GenerateTableauDames()
+        self.GenerateTableauPion()
         self.GenerateTableauPlayer(nombreJoueurs)
         self.Refresh(True)
     
-    def UpdateGui(self):        
+    def UpdateGui(self): #Fonction permettant de mettre à jour le texte de l'interface
         print("Updating GUI !")
         global Label_NbrPionsJ1, Label_NbrPionsJ2, Label_TourActuel
         Label_NbrPionsJ1.config(text= "Nombre de pions restants : {}".format(self.TableauJoueurs[0].nbrPions))
         Label_NbrPionsJ2.config(text= "Nombre de pions restants : {}".format(self.TableauJoueurs[1].nbrPions))
-        Label_TourActuel.config(text= "Equipe qui joue : {}".format(self.teamToPlay))
+        Label_TourActuel.config(text= "Equipe jouant : {}".format(self.teamToPlay))
         
-    def Refresh(self, SwitchTurn):
+    def Refresh(self, SwitchTurn): #Fonction permettant de rafraichir le damier avec les nouvelles positions des pions
         
         #Anti-Lag
         self.delete("caseDamier1")
@@ -253,7 +262,7 @@ class GameEngine():
             self.Tour(True, False)
     
     
-    def Tour(self, newTurn, isSkip):
+    def Tour(self, newTurn, isSkip): #Fonction s'executant à la fin de chaque tour
         
         global timeLeft
 
@@ -261,20 +270,22 @@ class GameEngine():
             messagebox.showinfo("Gagné !!!", "J2 Won")
         elif self.TableauJoueurs[1].nbrPions == 0:
             messagebox.showinfo("Gagné !!!", "J1 Won")
-        
+
+        self.isPionSelect = False
         self.pionSelect = 0
+        self.deleteMoveGraphObject()
 
         if newTurn == True:
             if (self.teamToPlay == "Blanc" and self.BlancSkip == True) or (self.teamToPlay == "Blanc" and self.BlancSkip == False and self.isSkip == True):
                 self.teamToPlay = "Noir"
             else:
                 self.teamToPlay = "Blanc"
-            timeLeft = 19000
-                
+
+        timeLeft = 180000                   
         self.UpdateGui()
             
 
-    def GenerateTableauDames(self):
+    def GenerateTableauPion(self): #Fonction gérant la position initiale des pions
         
         PosX = -25
         PosY = 25
@@ -320,7 +331,7 @@ class GameEngine():
             self.TableauJoueurs[1] = Player("Joueur 2", 2, 20, False)
     
     
-    def movePion(self, PionSelect, Direction):
+    def movePion(self, PionSelect, Direction): #Fonction gérant le déplacement des pions
         
         pionToMove = PionSelect
         isMove = False
@@ -360,6 +371,9 @@ class GameEngine():
             return
         
         #Déplacement du pion
+
+        if self.TableauDames[pionToMove].Status == "Dame":
+            print("lul")
         
         if self.TableauDames[pionToMove + (numberChange)].Status == "Null": #Si l'endroit ou le pion doit aller est vide
         
@@ -442,15 +456,18 @@ class GameEngine():
         
         if isMove == False:
             self.CheckTransformatonDame(pionToMove + (numberChange))
+            if self.showPlaceToGo(pionToMove + (numberChange), True) == "PionCanBeTake":
+                self.Refresh(False)
         else:
             self.CheckTransformatonDame(pionToMove + (numberChange * 2))
-
-        if self.showPlaceToGo(PionSelect, True) == "PionCanBeTake":
-            self.Refresh(False)
+            if self.showPlaceToGo((pionToMove + (numberChange * 2)), True) == "PionCanBeTake":
+                self.Refresh(False)
+        
 
         self.Refresh(True)
     
-    def CheckTransformatonDame(self, PionSelect):
+    def CheckTransformatonDame(self, PionSelect): #Fonction qui regarde si les pions doivent se transformer en dames
+
         pionSelect = PionSelect
         
         if self.TableauDames[pionSelect].Status == "Pion":
@@ -463,7 +480,7 @@ class GameEngine():
         cercleX = -25
         cercleY = 25    
 
-        while i < len(self.TableauDames):
+        while i < len(self.TableauDames): #Selon le status de chaque pion dans le tableau on l'affiche graphiquement sur le damier
             x = 0
             while x < 10:
                 cercleX += 50
@@ -504,29 +521,13 @@ class GameEngine():
                     x = -100
                     y += 100
             line += 1
-        
-    def Reset():
-        self.TableauDames = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, #0 to 10
-                             1, 0, 1, 0, 1, 0, 1, 0, 1, 0, #10 to 20
-                             0, 1, 0, 1, 0, 1, 0, 1, 0, 1, #20 to 30
-                             1, 0, 1, 0, 1, 0, 1, 0, 1, 0, #30 to 40
-                             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, #40 to 50
-                             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, #50 to 60
-                             0, 2, 0, 2, 0, 2, 0, 2, 0, 2, #60 to 70
-                             2, 0, 2, 0, 2, 0, 2, 0, 2, 0, #70 to 80
-                             0, 2, 0, 2, 0, 2, 0, 2, 0, 2, #80 to 90
-                             2, 0, 2, 0, 2, 0, 2, 0, 2, 0] #90 to 100
-
-
-
+       
 ## Fonctions utilisée lorsque l'on clique 
 
-    def selectPion_OnClick(self, PosX, PosY): 
+    def selectPion_OnClick(self, PosX, PosY): #Fonction s'éxécutant en cas de click du joueur sur le damier
         
         #Suppression des formes géométriques si elles sont déjà créer
-        self.delete("rectangleSelectPion")
-        for i in range(len(self.CercleChoixPossible)):
-            self.canvas.delete(self.CercleChoixPossible[i])
+        self.deleteMoveGraphObject()
 
         #Debug
         print("PosX % 100 = ", PosX % 100)
@@ -572,7 +573,7 @@ class GameEngine():
             
             self.showPlaceToGo(self.pionSelect, False)
 
-    def getCaseIdByPos(self, PosX, PosY):
+    def getCaseIdByPos(self, PosX, PosY): #Fonction permettant d'obtenir l'id d'un pion en fonction de l'emplacement clické
         for i in range(len(self.TableauDames)):
             if ((PosX % 100) > 25 and (PosY % 100) > 25) or ((PosX % 100) > 25 and (PosY % 100) < 25):
                 if (self.TableauDames[i].PosX == self.roundint(PosX, 25) or self.TableauDames[i].PosX == self.roundint(PosX, 25) + 25) and (self.TableauDames[i].PosY == self.roundint(PosY, 25) or self.TableauDames[i].PosY == self.roundint(PosY, 25) + 25):
@@ -595,8 +596,14 @@ class GameEngine():
                     print("Pion found at PosX :", PosX, "Pos Y :", PosY, "i :", i)
                     return i
         return 99
-        
+
+    def deleteMoveGraphObject(self):
+        self.delete("rectangleSelectPion")
+        for i in range(len(self.CercleChoixPossible)):
+            self.canvas.delete(self.CercleChoixPossible[i])
+
     def showPlaceToGo(self, pionSelect, checkMultiPrise): #Montre les endroits possibles sur le damier
+        
         
         pionSelect = pionSelect #Variable qui contiendra l'id du pion sélectionner
         
@@ -661,13 +668,13 @@ class GameEngine():
             return "PionCanBeTake"
         elif checkMultiPrise == True:
             return "NoPionCanBeTake"
-                  
+         
 # --- Fonctions Graphiques et utilitaires ---
 
-    def roundint(self, value, base=5):
+    def roundint(self, value, base=5): #Fonction permettant d'arrondir
         return int(value) - int(value) % int(base)
     
-    def delete(self, MonTag):
+    def delete(self, MonTag): #Fonction permettant de supprimer des objets graphiques en fonction d'un tag
         self.canvas.delete(self.canvas.find_withtag(MonTag))
 
     def cercle(self, x, y, r, coul, tagsC = "cercle"): #Fonction permettant de tracer un cercle
