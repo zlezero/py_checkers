@@ -116,6 +116,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.Update_Timer()
 
         if self.nbrJoueurs == 1:
+            self.Label_Joueur2.config(text = "-- Joueur 2 (Ia) --")
             self.GEng.StartGame(1)
         else:
             self.GEng.StartGame(2)
@@ -236,7 +237,7 @@ class GameEngine():
         self.isPionSelect = False
         self.pionSelect = 99
         self.CercleChoixPossible = []
-        self.TableauCaseChoixPossible = []
+        self.ListeCaseChoixPossible = []
         self.caseIdPionSelect = 0
         
         self.listePionGraphique = []
@@ -318,7 +319,7 @@ class GameEngine():
                 PosX += 50
                 self.TableauDames[i+1] = Case("Noir", PosX, PosY, "Pion", "1")
             elif (i >= 10 and i <= 20) or (i >= 30 and i < 40):
-                self.TableauDames[i] = Case("Noir", PosX, PosY, "Dame", "1")
+                self.TableauDames[i] = Case("Noir", PosX, PosY, "Pion", "1")
                 PosX += 50
                 self.TableauDames[i+1] = Case("Null", PosX, PosY, "Null", "0")
             elif i >= 40 and i < 60:
@@ -395,6 +396,7 @@ class GameEngine():
 
         if self.TableauDames[pionToMove].Status == "Dame":
             
+            #Système pour bouger la dame du point de départ au point d'arrivée
             TempV = self.TableauDames[CaseFinale]
             TempOld = self.TableauDames[pionToMove]
             
@@ -410,6 +412,19 @@ class GameEngine():
             TempV.PosY = PosYNew
             
             self.TableauDames[pionToMove] = TempV
+
+            #Système pour prendre un pion si il y en a un sur le trajet
+
+            elementToMultiply = 0
+            for i in range(9):
+                elementToMultiply += 1
+                if CaseFinale - (numberChange * elementToMultiply) < 100 and CaseFinale - (numberChange * elementToMultiply) > 0:
+                    if self.TableauDames[CaseFinale - (numberChange * elementToMultiply)].Status == "Pion" and self.TableauDames[CaseFinale - (numberChange * elementToMultiply)].Equipe != self.TableauDames[CaseFinale].Equipe:
+                        self.TableauDames[CaseFinale - (numberChange * elementToMultiply)].Status = "Null"
+                        self.TableauDames[CaseFinale - (numberChange * elementToMultiply)].Couleur = "Null"
+                        self.TableauDames[CaseFinale - (numberChange * elementToMultiply)].Equipe = "0"
+                        break
+                
 
         elif self.TableauDames[pionToMove + (numberChange)].Status == "Null": #Si l'endroit ou le pion doit aller est vide
         
@@ -495,12 +510,16 @@ class GameEngine():
         else:
             self.CheckTransformatonDame(pionToMove + (numberChange * 2))
 
-            if self.showPlaceToGo((pionToMove + (numberChange * 2)), True) == "PionCanBeTake":
-                print("Prise Multiple !")
-                self.Refresh(False)
-        
+            #if self.showPlaceToGo((pionToMove + (numberChange * 2)), True) == "PionCanBeTake":
+                #print("Prise Multiple !")
+                #self.Refresh(False)
+        self.Refresh(False)
+
+
+        #self.selectPion_OnClick(PosX, PosY)
 
         self.Refresh(True)
+
     
     def CheckTransformatonDame(self, PionSelect): #Fonction qui regarde si les pions doivent se transformer en dames
 
@@ -577,14 +596,14 @@ class GameEngine():
 
             #if PosY > self.caseIdPionSelect
             if self.TableauDames[self.caseIdPionSelect].PosY < PosY :
-                if self.TableauDames[self.caseIdPionSelect].PosX < PosX and caseIdClicked in self.TableauCaseChoixPossible:
+                if self.TableauDames[self.caseIdPionSelect].PosX < PosX and caseIdClicked in self.ListeCaseChoixPossible:
                     self.movePion(self.pionSelect, "DiagDroiteBas", caseIdClicked)
-                elif self.TableauDames[self.caseIdPionSelect].PosX > PosX and caseIdClicked in self.TableauCaseChoixPossible:
+                elif self.TableauDames[self.caseIdPionSelect].PosX > PosX and caseIdClicked in self.ListeCaseChoixPossible:
                     self.movePion(self.pionSelect, "DiagGaucheBas", caseIdClicked)
             else:
-                if self.TableauDames[self.caseIdPionSelect].PosX < PosX and caseIdClicked in self.TableauCaseChoixPossible:
+                if self.TableauDames[self.caseIdPionSelect].PosX < PosX and caseIdClicked in self.ListeCaseChoixPossible:
                     self.movePion(self.pionSelect, "DiagDroiteHaut", caseIdClicked)
-                elif self.TableauDames[self.caseIdPionSelect].PosX > PosX and caseIdClicked in self.TableauCaseChoixPossible:
+                elif self.TableauDames[self.caseIdPionSelect].PosX > PosX and caseIdClicked in self.ListeCaseChoixPossible:
                     self.movePion(self.pionSelect, "DiagGaucheHaut", caseIdClicked) 
 
             self.isPionSelect = False
@@ -607,7 +626,7 @@ class GameEngine():
             
             self.canvas.create_rectangle(self.roundint(PosX, 50), self.roundint(PosY, 50), self.roundint(PosX, 50) + 50, self.roundint(PosY, 50) + 50 , outline = "yellow", width = 3, tags = "rectangleSelectPion")
             
-            self.showPlaceToGo(self.pionSelect, False)
+            self.showPlaceToGo(self.pionSelect)
 
     def getCaseIdByPos(self, PosX, PosY): #Fonction permettant d'obtenir l'id d'un pion en fonction de l'emplacement clické
         for i in range(len(self.TableauDames)):
@@ -631,53 +650,48 @@ class GameEngine():
                 if self.TableauDames[i].PosX == self.roundint(PosX, 25) and self.TableauDames[i].PosY == self.roundint(PosY, 25):
                     print("Pion found at PosX :", PosX, "Pos Y :", PosY, "i :", i)
                     return i
-        return 99
+        return 99 #Si l'on ne trouve aucun pion
 
-    def deleteMoveGraphObject(self):
+    def deleteMoveGraphObject(self): #Fonction qui permet de supprimer les éléments graphiques relatifs à la selection d'un pion
         self.delete("rectangleSelectPion")
         for i in range(len(self.CercleChoixPossible)):
             self.canvas.delete(self.CercleChoixPossible[i])
 
-    def showPlaceToGo(self, pionSelect, checkMultiPrise): #Montre les endroits possibles sur le damier
+    def showPlaceToGo(self, pionSelect): #Montre les endroits possibles sur le damier
         
-        
+        checkMultiPrise = False
         pionSelect = pionSelect #Variable qui contiendra l'id du pion sélectionner
         canTakePion = False #Variable permettant de savoir si l'on peut prendre un pion
 
         listeInterdit = [0, 2, 4, 6, 8, 11, 13, 15, 17, 19, 20, 22, 24, 26, 28, 31, 33, 35, 37, 39, 40, 42, 44, 46, 48, 51, 53, 55, 57, 59, 60, 62, 64, 66, 68, 71, 73, 75, 77, 79, 80, 82, 84, 86, 88, 91, 93, 95, 97, 99] #Cases ou les pions ne pourront jamais aller
-        
         listeCheck = [-11, -9, 9, 11]
+        listeCheckDynamic = []
 
         self.CercleChoixPossible = [] #Tableau contenant les positions des cercles qui indiquent les choix possibles
-        self.TableauCaseChoixPossible = []
+        self.ListeCaseChoixPossible = []
 
         if self.TableauDames[pionSelect].Equipe == "1": #Si les blancs jouent on descend les pions vers le bas
-            numberChange2 = 9           
-            numberChange1 = 11
+            listeCheckDynamic.append(9)
+            listeCheckDynamic.append(11)
 
         elif self.TableauDames[pionSelect].Equipe == "2": #Sinon on regarde vers le haut
-            numberChange1 = -9
-            numberChange2 = -11
-            
+            listeCheckDynamic.append(-9)
+            listeCheckDynamic.append(-11)
+
         #Système de preview de déplacement des dames
 
         if self.TableauDames[pionSelect].Status == "Dame":
             for i in listeCheck:
-
                 numberToMutiply = 1
                 nbrPions = 0
-
                 while numberToMutiply < 9:
                     if pionSelect + (i * numberToMutiply) < 99 and pionSelect + (i * numberToMutiply) > 0:
-
-                        if self.TableauDames[pionSelect + (i * numberToMutiply)].Status == "Pion":
+                        if self.TableauDames[pionSelect + (i * numberToMutiply)].Status == "Pion" or self.TableauDames[pionSelect + (i * numberToMutiply)].Status == "Dame":
                                nbrPions += 1
-
                         if self.TableauDames[pionSelect + (i * numberToMutiply)].Status == "Null" and pionSelect + (i * numberToMutiply) not in listeInterdit:
                             if nbrPions == 0 or nbrPions == 1:
                                 self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + (i * numberToMutiply)].PosX - 5, self.TableauDames[pionSelect + (i * numberToMutiply)].PosY - 5, self.TableauDames[pionSelect + (i * numberToMutiply)].PosX + 5, self.TableauDames[pionSelect + (i * numberToMutiply)].PosY + 5, fill= "yellow"))
-                                self.TableauCaseChoixPossible.append(pionSelect + (i * numberToMutiply)) 
-
+                                self.ListeCaseChoixPossible.append(pionSelect + (i * numberToMutiply)) 
                     numberToMutiply += 1
             return
          
@@ -687,27 +701,17 @@ class GameEngine():
                if pionSelect + (i * 2) < 100 and pionSelect + (i * 2) > 0:
                     if (self.TableauDames[pionSelect + (i)].Status == "Pion" or self.TableauDames[pionSelect + (i)].Status == "Dame") and self.TableauDames[pionSelect + (i * 2)].Status == "Null" and self.TableauDames[pionSelect + (i)].Equipe != self.TableauDames[pionSelect].Equipe and pionSelect + (i) not in listeInterdit and pionSelect + (i * 2) not in listeInterdit:   
                        self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + (i * 2)].PosX - 5, self.TableauDames[pionSelect + (i * 2)].PosY - 5, self.TableauDames[pionSelect + (i * 2)].PosX + 5, self.TableauDames[pionSelect + (i * 2)].PosY + 5, fill= "yellow"))
-                       self.TableauCaseChoixPossible.append(pionSelect + (i * 2))
+                       self.ListeCaseChoixPossible.append(pionSelect + (i * 2))
                        canTakePion = True
+        
+        if checkMultiPrise != True or canTakePion == True:
+            for i in listeCheckDynamic:
+                if pionSelect + (i) < 100 and pionSelect + (i) > 0:
+                    if self.TableauDames[pionSelect + (i)].Status == "Null" and pionSelect + (i) not in listeInterdit:
+                        self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + (i)].PosX - 5, self.TableauDames[pionSelect + (i)].PosY - 5,  self.TableauDames[pionSelect + (i)].PosX + 5, self.TableauDames[pionSelect + (i)].PosY + 5, fill= "yellow"))
+                        self.ListeCaseChoixPossible.append(pionSelect + (i))
 
-        if checkMultiPrise != True or canTakePion == False:
-
-            if pionSelect + (numberChange1) < 100 or pionSelect + (numberChange2) < 100 and pionSelect + (numberChange1) > 0 or pionSelect + (numberChange2) > 0:
-            
-                if self.TableauDames[pionSelect + (numberChange1)].Status == "Null" and (pionSelect + numberChange1) not in listeInterdit: #Si la case est vide
-
-                    self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + (numberChange1)].PosX - 5, self.TableauDames[pionSelect + (numberChange1)].PosY - 5,  self.TableauDames[pionSelect + (numberChange1)].PosX + 5, self.TableauDames[pionSelect + (numberChange1)].PosY + 5, fill= "yellow"))
-                
-                    self.TableauCaseChoixPossible.append(pionSelect + (numberChange1))
-                                
-                if (self.TableauDames[pionSelect + (numberChange2)].Status == "Null" and (pionSelect + numberChange2) not in listeInterdit): #Si la case est vide
-                
-                    self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + (numberChange2)].PosX - 5, self.TableauDames[pionSelect + (numberChange2)].PosY - 5, self.TableauDames[pionSelect + (numberChange2)].PosX + 5, self.TableauDames[pionSelect + (numberChange2)].PosY + 5, fill= "yellow"))
-               
-                    self.TableauCaseChoixPossible.append(pionSelect + (numberChange2))
-
-
-        if checkMultiPrise == True and self.TableauCaseChoixPossible != []:
+        if checkMultiPrise == True and self.ListeCaseChoixPossible != []:
             return "PionCanBeTake"
         elif checkMultiPrise == True:
             return "NoPionCanBeTake"
