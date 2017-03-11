@@ -276,7 +276,9 @@ class GameEngine():
         if SwitchTurn == True:
             self.Tour(True, False)
     
-    
+    def IA(self):
+        print("IA !")
+
     def Tour(self, newTurn, isSkip): #Fonction s'executant à la fin de chaque tour
         
         global timeLeft
@@ -295,6 +297,9 @@ class GameEngine():
                 self.teamToPlay = "Noir"
             else:
                 self.teamToPlay = "Blanc"
+
+        if self.TableauJoueurs[0].isAi == True or self.TableauJoueurs[1].isAi == True:
+            self.IA()
 
         timeLeft = 180000                   
         self.UpdateGui()
@@ -406,7 +411,7 @@ class GameEngine():
             
             self.TableauDames[pionToMove] = TempV
 
-        if self.TableauDames[pionToMove + (numberChange)].Status == "Null": #Si l'endroit ou le pion doit aller est vide
+        elif self.TableauDames[pionToMove + (numberChange)].Status == "Null": #Si l'endroit ou le pion doit aller est vide
         
             TempV = self.TableauDames[pionToMove + (numberChange)]
             TempOld = self.TableauDames[pionToMove]
@@ -658,17 +663,21 @@ class GameEngine():
 
         if self.TableauDames[pionSelect].Status == "Dame":
             for i in listeCheck:
+
                 numberToMutiply = 1
                 nbrPions = 0
-                while numberToMutiply < 8:
+
+                while numberToMutiply < 9:
                     if pionSelect + (i * numberToMutiply) < 99 and pionSelect + (i * numberToMutiply) > 0:
+
+                        if self.TableauDames[pionSelect + (i * numberToMutiply)].Status == "Pion":
+                               nbrPions += 1
+
                         if self.TableauDames[pionSelect + (i * numberToMutiply)].Status == "Null" and pionSelect + (i * numberToMutiply) not in listeInterdit:
                             if nbrPions == 0 or nbrPions == 1:
                                 self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + (i * numberToMutiply)].PosX - 5, self.TableauDames[pionSelect + (i * numberToMutiply)].PosY - 5, self.TableauDames[pionSelect + (i * numberToMutiply)].PosX + 5, self.TableauDames[pionSelect + (i * numberToMutiply)].PosY + 5, fill= "yellow"))
-                                self.TableauCaseChoixPossible.append(pionSelect + (i * numberToMutiply))
-                                for i in listeCheck:    
-                                    if self.TableauDames[pionSelect + (i * numberToMutiply)].Status == "Pion" and self.TableauDames[pionSelect + (i * (numberToMutiply + 1))].Status == "Pion":
-                                        nbrPions += 1
+                                self.TableauCaseChoixPossible.append(pionSelect + (i * numberToMutiply)) 
+
                     numberToMutiply += 1
             return
          
