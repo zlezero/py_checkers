@@ -269,9 +269,6 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.nbrPionsRestantsJ2_Text = "Nombre de pions restants : 20"
         self.tourActuel = "Equipe jouant : Blanc"
         
-        #Texte.append(self.nbrPionsRestantsJ1_Text)
-        #Texte.append(self.nbrPionsRestantsJ2_Text)
-        
         # -- Affichage du texte --
         self.Label_Joueur1 = Label(self.frame, text = "-- Joueur 1 --")
         self.Label_Joueur1.pack()
@@ -902,7 +899,6 @@ class GameEngine():
         self.canvas.delete(self.canvas.find_withtag(MonTag))
 
     def cercle(self, x, y, r, coul, tagsC = "cercle"): #Fonction permettant de tracer un cercle
-        "tracé d ' un cercle de centre (x,y) et de rayon r"
         self.canvas.create_oval(x-r, y-r, x+r, y+r, fill=coul, tags="cercleChoixPos")
     
     def Rectangle(self, x, y, coul): #Fonction permettant de tracer un rectangle
