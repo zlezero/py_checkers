@@ -1,12 +1,12 @@
+import time
 import socket
 import select
-import sys
 import time
 import pickle
+import sys
 from tkinter import *
 from tkinter import messagebox
 from threading import Thread
-
 
 ##Variables de l'interface graphique et de jeu
 
@@ -14,17 +14,13 @@ Label_NbrPionsJ1 = None
 Label_NbrPionsJ2 = None
 Label_TourActuel = None
 Label_Timer = None
-Label_Host = None
-
 timeLeft = 180000
 
-isConnected = False
-TableauDames = []
-NetworkI = None
+Ip = ""
+isMultiplayer = False
 isHost = False
-networkTeam = "Blanc"
-switchTurn = False
-isDataRecieve = False
+
+GEng = None
 
 ## -- Toutes les différentes GUI --
 
@@ -67,13 +63,13 @@ class MainMenu(): #Classe représentant le menu principal
         Root.title("Jeu de Dames - Jeu")
         self.Hide_Window()
         self.newWindow = Toplevel(self.master)
-        self.app = Jeu(self.newWindow, 1, False)
+        self.app = Jeu(self.newWindow, 2, True)
 
     def Open_GameWindow1VIA(self): #Fonction ouvrant la fenêtre de jeu
         Root.title("Jeu de Dames - Jeu")
         self.Hide_Window()
         self.newWindow = Toplevel(self.master)
-        self.app = Jeu(self.newWindow, 1, False)
+        self.app = Jeu(self.newWindow, 1, True)
     
     def Open_OptionsWindow(self): #Fonction ouvrant la fenêtre des options
         Root.title("Jeu de Dames - Options")
@@ -115,11 +111,18 @@ class Options(): #Classe représentant le menu des options
     def Close_Window(self): #Fonction permettant de fermer la fenêtre
         self.master.destroy()
 
+
 class Multijoueur(): #Classe représentant le menu des options
     
     def __init__(self, master): #Initialisation de l'interface et de la classe
+        global GEng
+
         self.master = master
         self.Frame = Frame(master)
+
+        self.Game = Jeu(self.master, 1, False)
+
+        GEng = GameEngine(self.Game.can)
 
         self.isHost = 0
         self.Ip = ""
@@ -132,62 +135,77 @@ class Multijoueur(): #Classe représentant le menu des options
 
         self.Label_InfoIp = Label(self.Frame, text = "Adresse ip : ")
         self.Label_InfoIp.pack()
+
         self.Textbox_Ip = Entry(self.Frame, textvariable = self.Ip)
         self.Textbox_Ip.pack()
+
         self.CheckBox_isHost = Checkbutton(self.Frame, text = "Host ?", variable = self.isHost, command = self.CheckBox_Tick)
         self.CheckBox_isHost.pack()
-        self.Button_Launch = Button(self.Frame, text = "Lancer", command = self.Launch_Multi)
+
+        self.Button_Launch = Button(self.Frame, text = "Lancer", command = self.Launch_Multijoueur)
         self.Button_Launch.pack()
+
         self.Button_Return = Button(self.Frame, text = "Retourner au menu", command = self.Open_MainMenuWindow)
         self.Button_Return.pack()
+
         self.Label_ConnectInfo = Label(self.Frame, text = "Attente d'un client !")
         self.Label_ConnectInfo.pack_forget()
 
-    def Launch_Multi(self):
+    def Launch_Multijoueur(self):
+        global Ip, GEng, isMultiplayer
 
-        global NetworkI, networkTeam
+        Ip = self.Textbox_Ip.get()
+        GEng.Ip = Ip
+        isMultiplayer = True
+        GEng.isMultiplayer = isMultiplayer
 
-        self.Ip = self.Textbox_Ip.get()
-
-        if self.isHost == 0 and self.Ip != "":
-            print("Connecting !")
-            NetworkI = Network(self.Ip, self.isHost)
-            networkTeam = "Blanc"
-            self.Connect()
-        elif self.isHost == 1:
-            print("Hosting !")
-            networkTeam = "Noir"
-            NetworkI = Network(self.Ip, self.isHost)
+        if self.isHost == 1:
+            print("Launching host...")
             self.Host()
         else:
-            messagebox.showerror("Erreur", "Configuration invalide !")
-
-
-    def Connect(self):
-
-        global isConnected, NetworkI
-
-        self.Client = Thread(target = NetworkI.Client_Init, args = (False,))
-        self.Client.start()
-        self.Label_ConnectInfo.config(text = "Tentative de connexion...")
-        self.Label_ConnectInfo.pack()
-        while isConnected == False:
-            print("Tentative de connexion...")
-        self.Label_ConnectInfo.config(text = "Connecté !")
-        self.Open_GameWindow()
+            print("Launching client...")
+            self.Client()
 
     def Host(self):
+        global GEng, isHost
 
-        global isConnected, NetworkI
+        isHost = True
+        GEng.isHost = True
 
-        self.Serveur = Thread(target = NetworkI.Serveur_Init, args = (False,))
+        print("Hosting...")
+        self.Serveur = Thread(target = GEng.Serveur_Init)
         self.Serveur.start()
+
         self.Label_ConnectInfo.config(text = "Attente d'un client !")
         self.Label_ConnectInfo.pack()
-        while isConnected == False:
-            if isConnected == True:
-                self.Label_ConnectInfo.config(text = "Client connecté !")
+
+        self.WaitThread = Thread(target = self.WaitForConnection)
+        self.WaitThread.start()
+
+    
+    def Client(self):
+        global GEng, isHost; isMultiplayer
+
+        isHost = False
+     
+        print("Connecting...")
+        self.Client = Thread(target = GEng.Client_Init)
+        self.Client.start()
+
+        self.Label_ConnectInfo.config(text = "Tentative de connexion...")
+        self.Label_ConnectInfo.pack()
+
+        self.WaitThread = Thread(target = self.WaitForConnection)
+        self.WaitThread.start()
+
+    def WaitForConnection(self):
+        global GEng
+
+        while GEng.isConnected == False:
+            if GEng.isConnected:
+                self.Label_ConnectInfo.config(text = "Connexion établie !")
                 self.Open_GameWindow()
+
                          
     def CheckBox_Tick(self):
         if self.isHost == 0:
@@ -208,6 +226,8 @@ class Multijoueur(): #Classe représentant le menu des options
         self.app = Jeu(self.newWindow, 1, True)
 
     def Hide_Window(self):
+        self.isHost = 0
+        self.CheckBox_isHost.deselect()
         self.master.withdraw()
 
     def Show_Window(self):
@@ -216,196 +236,49 @@ class Multijoueur(): #Classe représentant le menu des options
 
     def Close_Window(self): #Fonction permettant de fermer la fenêtre
         self.master.destroy()
-
-
-
-class Network():
-
-
-    def __init__(self, ip, isHost):
-        self.Ip = ip
-        self.isHost = isHost
-        self.port = 12800
-        self.game_Launch = False
-
-    def Serveur_Init(self, secondInstance):
-
-        global isConnected, isHost
-
-        if secondInstance == False:
-            port = self.port
-        else:
-            port = self.port + 1
-
-        hote = ''
-        
-        self.connexion_principale = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.connexion_principale.bind((hote, port))
-        self.connexion_principale.listen(5)
-        print("Le serveur écoute à présent sur le port {}".format(port))
-
-        self.serveur_lance = True
-        isHost = True
-        self.clients_connectes = []
-
-        self.Serveur_WaitConnect()
-
-    def Serveur_WaitConnect(self):
-
-        global TableauDames, isConnected, switchTurn, isDataRecive
-
-        while self.serveur_lance:
-            # On va vérifier que de nouveaux clients ne demandent pas à se connecter
-            # Pour cela, on écoute la connexion_principale en lecture
-            # On attend maximum 50ms
-            self.connexions_demandees, self.wlist, self.xlist = select.select([self.connexion_principale],
-                [], [], 0.05)
-
-            for self.connexion in self.connexions_demandees:
-                self.connexion_avec_client, self.infos_connexion = self.connexion.accept()
-                isConnected = True
-                # On ajoute le socket connecté à la liste des clients
-                self.clients_connectes.append(self.connexion_avec_client)
-
-    
-            # Maintenant, on écoute la liste des clients connectés
-            # Les clients renvoyés par select sont ceux devant être lus (recv)
-            # On attend là encore 50ms maximum
-            # On enferme l'appel à select.select dans un bloc try
-            # En effet, si la liste de clients connectés est vide, une exception
-            # Peut être levée
-            self.clients_a_lire = []
-            try:
-                self.clients_a_lire, self.wlist, self.xlist = select.select(self.clients_connectes,
-                        [], [], 0.05)
-            except select.error:
-                pass
-            else:
-                # On parcourt la liste des clients à lire
-                for self.client in self.clients_a_lire:
-                    # Client est de type socket
-                    self.msg_recu = self.client.recv(4096)
-                    # Peut planter si le message contient des caractères spéciaux
-                    self.msg_recu = pickle.loads(self.msg_recu)
-                    print("Reçu {}".format(self.msg_recu))
-                    TableauDames = self.msg_recu
-                    if self.game_Launch == False:
-                        self.game_Launch = True
-                    else:
-                        switchTurn = True
-                        isDataRecieve = True
-
-                    self.Serveur_SendInfo()
-            
-        print("Fermeture des connexions")
-        for self.client in self.clients_connectes:
-            self.client.close()
-            isConnected = False
-
-        self.connexion_principale.close()
-
-    def Serveur_SendInfo(self):
-          self.msg_send = pickle.dumps(TableauDames)
-          #self.msg_send.encode()
-          self.client.send(self.msg_send)
-          #switchTurn = True
-          if self.msg_recu == "fin":
-             self.serveur_lance = False
-
-    def Client_SendMessage(self):
-
-        global isConnected, TableauDames
-
-        self.msg_a_envoyer = b""
-        while self.msg_a_envoyer != b"fin":
-            self.msg_a_envoyer = pickle.dumps(TableauDames)
-            #self.msg_a_envoyer = input("> ")
-            # Peut planter si vous tapez des caractères spéciaux
-            #self.msg_a_envoyer = self.msg_a_envoyer.encode()
-            # On envoie le message
-            self.connexion_avec_serveur.send(self.msg_a_envoyer)
-
-            self.msg_recu = self.connexion_avec_serveur.recv(4096)
-            self.msg_recu = pickle.loads(self.msg_recu)
-            #print(pickle.loads(self.msg_recu)) # Là encore, peut planter s'il y a des accents
-            #TableauDames = pickle.loads(self.msg_recu)
-            return self.msg_recu
-
-        print("Fermeture de la connexion")
-        self.connexion_avec_serveur.close()
-        isConnected = False
-
-    def Client_WaitMessage(self):
-        while self.msg_a_envoyer != b"fin":
-            self.msg_recu = self.connexion_avec_serveur.recv(4096)
-
-
-    def Client_Init(self, secondInstance):    
-
-        global isConnected, TableauDames
-
-        if secondInstance == False:
-            port = self.port
-        else:
-            port = self.port + 1
-
-        self.hote = self.Ip
-
-        self.connexion_avec_serveur = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.connexion_avec_serveur.connect((self.hote, port))
-        print("Connexion établie avec le serveur sur le port {}".format(port))
-
-        isConnected = True
-
-        self.Client_SendMessage()
-
-
-
-
-
+                
 class Jeu(): #Classe représentant l'interface du jeu de dames
     
-    def __init__(self, master, nbrJoueurs, isMultiplayer): #Initialisation de l'interface et de la classe
+    def __init__(self, master, nbrJoueurs, Start_Game): #Initialisation de l'interface et de la classe
 
-        global timeLeft
+        global timeLeft, GEng
 
         self.master = master
         self.frame = Frame(master)
          
         self.nbrJoueurs = nbrJoueurs
-        self.isMultiplayer = isMultiplayer
-
+        self.Start_Game = Start_Game
         self.can = Canvas(self.frame, width = 500, height = 500, bg = "ivory")
         self.can.pack(side = RIGHT, padx = 0, pady =0)
 
-        self.can.bind('<Button-1>', self.mouse_down)
+        if self.Start_Game == True:
+            
 
-        self.draw_Interface()
+            self.can.bind('<Button-1>', self.mouse_down)
 
-        self.GEng = GameEngine(self.can, isMultiplayer)
+            self.draw_Interface()
+
+            GEng = GameEngine(self.can)
         
-        self.frame.pack()
+            self.frame.pack()
 
-        self.Update_Timer()
-
-        if self.nbrJoueurs == 1:
-            self.Label_Joueur2.config(text = "-- Joueur 2 (Ia) --")
-            self.GEng.StartGame(1)
-        else:
-            self.GEng.StartGame(2)
+            self.Update_Timer()
+    
+            if self.nbrJoueurs == 1:
+                self.Label_Joueur2.config(text = "-- Joueur 2 (Ia) --")
+                GEng.StartGame(1)
+            else:
+                GEng.StartGame(2)
     
     def draw_Interface(self): #Fonction dessinant l'interface principale
         
-        global Label_NbrPionsJ1, Label_NbrPionsJ2, Label_TourActuel, timeLeft, Label_Timer, Label_Host, isHost
+        global Label_NbrPionsJ1, Label_NbrPionsJ2, Label_TourActuel, timeLeft, Label_Timer, isHost, isMultiplayer
         
         #Stockage du texte
         
         self.nbrPionsRestantsJ1_Text = "Nombre de pions restants : 20"
         self.nbrPionsRestantsJ2_Text = "Nombre de pions restants : 20"
-        self.tourActuel = "Equipe jouant : Blanc"
-        
-        #Texte.append(self.nbrPionsRestantsJ1_Text)
-        #Texte.append(self.nbrPionsRestantsJ2_Text)
+        self.tourActuel = "Equipe jouant : Blanc"        
         
         # -- Affichage du texte --
         self.Label_Joueur1 = Label(self.frame, text = "-- Joueur 1 --")
@@ -424,11 +297,13 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         Label_Timer.pack(pady = 10)
 
         if isHost == True:
-            Label_Host = Label(self.frame, text = "Host - Equipe Noire")
+            self.Label_Host = Label(self.frame, text = "Host - Equipe Noire")
         else:
-            Label_Host = Label(self.frame, text = "Client - Equipe Blanche")
-        Label_Host.pack()
-
+            self.Label_Host = Label(self.frame, text = "Client - Equipe Blanche")
+        
+        if isMultiplayer == True:
+            self.Label_Host.pack()
+        
         #-- Affichage des boutons
         self.Button_ReturnToMenu = Button(self.frame, text = "Retourner au menu", command = self.Open_MainMenuWindow)
         self.Button_ReturnToMenu.pack(side = BOTTOM, pady =3)
@@ -452,31 +327,34 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.app = MainMenu(self.newWindow)
 
     def mouse_down(self, event): #Fonction s'activant en cas de clic de souris sur l'interface de jeu
+        global GEng
+
         print("Mouse down at : x=", event.x, "y = ", event.y)
-        self.GEng.selectPion_OnClick(event.x, event.y)
+        GEng.selectPion_OnClick(event.x, event.y)
     
     def Restart_Game(self):
+
+        global GEng
+
         print("Restarting game !") 
         self.Update_Timer()
         if self.nbrJoueurs == 1:
-            self.GEng.StartGame(1)
+            GEng.StartGame(1)
         else:
-            self.GEng.StartGame(2)
+            GEng.StartGame(2)
 
     def Skip_Turn(self):
+
+        global GEng
+
         print("Skipping turn !")
-        self.GEng.Tour(True, True)
+        GEng.Tour(True, True)
 
     def Close_Window(self): #Fonction permettant de fermer la fenêtre
         self.master.destroy()
 
     def Update_Timer(self):
-        global timeLeft, Label_Timer, switchTurn
-
-        if switchTurn == True:
-            print("Switch turn !")
-            switchTurn = False
-            self.Skip_Turn()
+        global timeLeft, Label_Timer
 
         if timeLeft <= 0:
             self.Skip_Turn()
@@ -513,12 +391,17 @@ class Case():
         
 class GameEngine():
     
-    def __init__(self, canvas, isMultiplayer):
+    def __init__(self, canvas):
 
-        global networkTeam
+        global Ip, isMultiplayer, isHost
 
         self.isMultiplayer = isMultiplayer
-        self.networkTeam = networkTeam
+        self.isConnected = False
+        self.isHost = isHost
+        self.networkTeam = "Noir"
+        self.Hote = ""
+        self.Port = 12800
+        self.Ip = Ip
 
         self.teamToPlay = "Noir"
         self.canvas = canvas        
@@ -539,10 +422,68 @@ class GameEngine():
         self.priseMultiple = False
         self.CasePriseMultiple = 0
 
+    ##Fonctions multijoueurs
+    def Serveur_Init(self):
+        self.connexion_principale = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.connexion_principale.bind((self.Hote, self.Port))
+        self.connexion_principale.listen(5)
+        self.serveur_lance = True
+        print("Le serveur écoute à présent sur le port {}".format(self.Port))
+
+        while self.serveur_lance == True:
+            self.Serveur_WaitMessage()
+
+    def Serveur_WaitMessage(self):
+        self.connexion_avec_client, self.infos_connexion = self.connexion_principale.accept()
+        self.isConnected = True
+        self.msg_recu = ""
+        while self.msg_recu != b"fin":
+            self.msg_recu = self.connexion_avec_client.recv(4096)
+
+
+    def Serveur_SendMessage(self, messageToSend):
+        print("Sending message !")
+        self.connexion_avec_client.send(messageToSend)
+
+    def Serveur_StopServer(self):
+        print("Stopping server connection !")
+        self.connexion_avec_client.close()
+        self.connexion_principale.close()
+
+    def Client_Init(self):
+        self.connexion_avec_serveur = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.connexion_avec_serveur.connect((self.Ip, self.Port))
+        print("Connexion établie avec le serveur sur le port {}".format(self.Port))
+        self.isConnected = True
+
+    def Client_WaitMessage(self):
+        print("Waiting for message...")
+        msg_recu = ""
+        while msg_a_envoyer == "":
+            msg_recu = self.connexion_avec_serveur.recv(4096)
+            print("Message reçu")
+            return msg_recu
+
+    def Client_SendMessage(self, messageToSend):
+        print("Sending message...")
+        msg_a_envoyer = b""
+        while msg_a_envoyer != b"fin":
+            msg_a_envoyer = messageToSend
+            # On envoie le message
+            connexion_avec_serveur.send(msg_a_envoyer)
+
+    def Client_CloseConnection(self):
+        print("Closing connection to the server !")
+        self.connexion_avec_serveur.close()
+              
     def StartGame(self, nombreJoueurs): #Fonction se lançant au début de la partie
         print("Start / Restart Game")
 
         self.teamToPlay = "Noir"
+        if self.isHost == True:
+            self.networkTeam == "Noir"
+        else:
+            self.networkTeam == "Blanc"
         
         self.canvas.delete()
         self.GenerateTableauPion()
@@ -557,6 +498,7 @@ class GameEngine():
         Label_TourActuel.config(text= "Equipe jouant : {}".format(self.teamToPlay))
         
     def Refresh(self, SwitchTurn): #Fonction permettant de rafraichir le damier avec les nouvelles positions des pions
+
 
         #Anti-Lag
         self.delete("caseDamier1")
@@ -576,7 +518,7 @@ class GameEngine():
 
     def Tour(self, newTurn, isSkip): #Fonction s'executant à la fin de chaque tour
         
-        global timeLeft, TableauDames, isConnected, NetworkI, isHost, switchTurn, isDataRecieve
+        global timeLeft
 
         if self.TableauJoueurs[0].nbrPions == 0:
             messagebox.showinfo("Gagné !!!", "J2 Won")
@@ -585,51 +527,34 @@ class GameEngine():
 
         self.isPionSelect = False
         self.pionSelect = 0
-
         self.deleteMoveGraphObject()
-        self.Refresh(False)                
-
-        if switchTurn == True:
-            print("self.TableauDames = TableauDames")
-            self.TableauDames = TableauDames    
-        print("TableauDames = self.TableauDames")
-        TableauDames = self.TableauDames
 
         if newTurn == True:
-            print("New Turn = True")
+
             if (self.teamToPlay == "Blanc" and self.BlancSkip == True) or (self.teamToPlay == "Blanc" and self.BlancSkip == False and self.isSkip == True):
                 self.teamToPlay = "Noir"
             else:
                 self.teamToPlay = "Blanc"
 
-            if self.isMultiplayer == True and isConnected == True and isDataRecieve == False:
-                print("Multiplayer Check")
-                if isHost == False:
-                    print("Send message client Client")
-                    NetworkI.Client_SendMessage()
-                else:
-                    print("Send info Serveur")
-                    self.TableauDames = TableauDames
-                    NetworkI.Serveur_SendInfo()
+        if self.isMultiplayer == True and self.isConnected == True:
+            if self.isHost == True:
+                if self.networkTeam == self.teamToPlay:
+                    self.Serveur_SendMessage(pickle.dump(self.TableauDames))
             else:
-                print("self.TableauDames = TableauDames")
-                self.TableauDames = TableauDames
+                self.Client_SendMessage(pickle.dump(self.TableauDames))
+                self.ThreadWait_Client = Thread(target = self.Client_WaitMessage)
+                self.ThreadWait_Client.start()
 
-        isDataRecieve = False
-        switchTurn = False
+        if self.TableauJoueurs[0].isAi == True or self.TableauJoueurs[1].isAi == True:
+            self.IA()
 
-        #if self.TableauJoueurs[0].isAi == True or self.TableauJoueurs[1].isAi == True:
-            #self.IA()
-        
-        timeLeft = 180000
-           
-        self.Refresh(False)                
+        timeLeft = 180000                   
+
         self.UpdateGui()
             
 
     def GenerateTableauPion(self): #Fonction gérant la position initiale des pions
-        global TableauDames
-
+        
         PosX = -25
         PosY = 25
         i = 0
@@ -656,16 +581,14 @@ class GameEngine():
                 self.TableauDames[i] = Case("Blanc", PosX, PosY, "Pion", "2")
                 PosX += 50
                 self.TableauDames[i+1] = Case("Null", PosX, PosY, "Null", "0")
-            #print("Pos X :", i,  self.TableauDames[i].PosX)
-            #print("Pos Y :", i, self.TableauDames[i].PosY)
+            print("Pos X :", i,  self.TableauDames[i].PosX)
+            print("Pos Y :", i, self.TableauDames[i].PosY)
             i += 2
             
             if i == 10 or i == 20 or i == 30 or i == 40 or i == 50 or i == 60 or i == 70 or i == 80 or i == 90:
                 PosX =-25
                 PosY += 50
-
-            TableauDames = self.TableauDames
-
+    
     def GenerateTableauPlayer(self, numberPlayers):
         nombreJoueurs = numberPlayers
         if nombreJoueurs == 1:
@@ -932,10 +855,6 @@ class GameEngine():
         #On obtient l'id de la case en fonction d'où l'on a cliqué
         caseIdClicked = self.getCaseIdByPos(PosX, PosY)
 
-        if self.isMultiplayer == True and self.networkTeam != self.teamToPlay:
-            caseIdClicked = 0
-            return
-
         #Si un pion est déjà sélectionner on regarde où on peut l'envoyer
         if self.isPionSelect == True:
 
@@ -1040,6 +959,8 @@ class GameEngine():
                             if nbrPions == 0 or nbrPions == 1:
                                 self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + (i * numberToMutiply)].PosX - 5, self.TableauDames[pionSelect + (i * numberToMutiply)].PosY - 5, self.TableauDames[pionSelect + (i * numberToMutiply)].PosX + 5, self.TableauDames[pionSelect + (i * numberToMutiply)].PosY + 5, fill= "yellow"))
                                 self.ListeCaseChoixPossible.append(pionSelect + (i * numberToMutiply)) 
+                            else:
+                                canTakePion = True
                     numberToMutiply += 1
             return
          
@@ -1050,8 +971,9 @@ class GameEngine():
                     if (self.TableauDames[pionSelect + (i)].Status == "Pion" or self.TableauDames[pionSelect + (i)].Status == "Dame") and self.TableauDames[pionSelect + (i * 2)].Status == "Null" and self.TableauDames[pionSelect + (i)].Equipe != self.TableauDames[pionSelect].Equipe and pionSelect + (i) not in listeInterdit and pionSelect + (i * 2) not in listeInterdit:   
                        self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + (i * 2)].PosX - 5, self.TableauDames[pionSelect + (i * 2)].PosY - 5, self.TableauDames[pionSelect + (i * 2)].PosX + 5, self.TableauDames[pionSelect + (i * 2)].PosY + 5, fill= "yellow"))
                        self.ListeCaseChoixPossible.append(pionSelect + (i * 2))
+                       canTakePion = True
         
-        if self.priseMultiple != True or canTakePion == True:
+        if self.priseMultiple != True and canTakePion != True:
             for i in listeCheckDynamic:
                 if pionSelect + (i) < 100 and pionSelect + (i) > 0:
                     if self.TableauDames[pionSelect + (i)].Status == "Null" and pionSelect + (i) not in listeInterdit:
