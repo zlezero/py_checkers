@@ -1,5 +1,6 @@
 import time
 import winsound
+import random
 import tkinter.ttk as tkk
 from threading import Thread
 from tkinter import *
@@ -20,6 +21,7 @@ Couleur_PionNoir = "brown"
 Couleur_DamierNoir = "black"
 Couleur_DameBlancCouleur = "ivory"
 Couleur_DameNoirCouleur = "red"
+Couleur_PionPreview = "yellow"
 
 ## -- Toutes les différentes GUI --
 
@@ -167,6 +169,7 @@ class Options(): #Classe représentant le menu des options
         self.Frame.pack()
 
     def Draw_Interface(self):
+
         self.Label_Damier = Label(self.Frame, text = "Couleur damier : ")
         self.Label_Damier.pack()
         self.ComboBox_Damier = tkk.Combobox(self.Frame, values = self.Colors, state = "readonly")
@@ -187,31 +190,51 @@ class Options(): #Classe représentant le menu des options
         self.Label_DameNoir.pack()
         self.ComboBox_DameNoir = tkk.Combobox(self.Frame, values = self.Colors, state = "readonly")
         self.ComboBox_DameNoir.pack()
+        self.Label_Preview = Label(self.Frame, text = "Couleur Preview : ")
+        self.Label_Preview.pack()
+        self.ComboBox_Preview = tkk.Combobox(self.Frame, values = self.Colors, state = "readonly")
+        self.ComboBox_Preview.pack()
+
+        self.Button_Random = Button(self.Frame, text = "Aléatoire", command = self.Random)
+        self.Button_Random.pack()
+
         self.Button_Save = Button(self.Frame, text = "Sauvegarder", command = self.Save)
         self.Button_Save.pack()
+
         self.Button_Return = Button(self.Frame, text = "Retourner au menu", command = self.Open_MainMenuWindow)
         self.Button_Return.pack()
+
         self.setDefaultColor()
 
     def setDefaultColor(self):
-        global Couleur_DameBlancCouleur, Couleur_DameNoirCouleur, Couleur_DamierNoir, Couleur_PionBlanc, Couleur_PionNoir
+        global Couleur_DameBlancCouleur, Couleur_DameNoirCouleur, Couleur_DamierNoir, Couleur_PionBlanc, Couleur_PionNoir, Couleur_PionPreview
 
         self.ComboBox_Damier.set(Couleur_DamierNoir)
         self.ComboBox_PionBlanc.set(Couleur_PionBlanc)
         self.ComboBox_PionNoir.set(Couleur_PionNoir)
         self.ComboBox_DameBlanc.set(Couleur_DameBlancCouleur)
         self.ComboBox_DameNoir.set(Couleur_DameNoirCouleur)
+        self.ComboBox_Preview.set(Couleur_PionPreview)
 
     def Save(self):
 
-        global Couleur_DameBlancCouleur, Couleur_DameNoirCouleur, Couleur_DamierNoir, Couleur_PionBlanc, Couleur_PionNoir
+        global Couleur_DameBlancCouleur, Couleur_DameNoirCouleur, Couleur_DamierNoir, Couleur_PionBlanc, Couleur_PionNoir, Couleur_PionPreview
 
         Couleur_DameBlancCouleur = self.ComboBox_DameBlanc.get()
         Couleur_DameNoirCouleur = self.ComboBox_DameNoir.get()
         Couleur_DamierNoir = self.ComboBox_Damier.get()
         Couleur_PionBlanc = self.ComboBox_PionBlanc.get()
         Couleur_PionNoir = self.ComboBox_PionNoir.get()
+        Couleur_PionPreview = self.ComboBox_Preview.get()
         self.Open_MainMenuWindow()
+
+    def Random(self):
+        self.ComboBox_DameBlanc.set(random.choice(self.Colors))
+        self.ComboBox_DameNoir.set(random.choice(self.Colors))
+        self.ComboBox_Damier.set(random.choice(self.Colors))
+        self.ComboBox_PionBlanc.set(random.choice(self.Colors))
+        self.ComboBox_PionNoir.set(random.choice(self.Colors))
+        self.ComboBox_Preview.set(random.choice(self.Colors))
 
     def Open_MainMenuWindow(self):
         Root.title("Jeu de Dames - Menu Principal")
@@ -373,6 +396,9 @@ class GameEngine():
         self.pionSelect = 99
         self.CercleChoixPossible = []
         self.ListeCaseChoixPossible = []
+        self.listePionCanTake = []
+        self.listePionWhoCanTake = []
+        self.hasAlreadyCheckedTake = False
         self.caseIdPionSelect = 0
         
         self.listePionGraphique = []
@@ -424,6 +450,8 @@ class GameEngine():
         
         global timeLeft
 
+        self.hasAlreadyCheckedTake = False
+
         if self.TableauJoueurs[0].nbrPions == 0:
             messagebox.showinfo("Gagné !!!", "J2 Won")
         elif self.TableauJoueurs[1].nbrPions == 0:
@@ -444,7 +472,6 @@ class GameEngine():
             self.IA()
 
         timeLeft = 180000                   
-
         self.UpdateGui()
             
 
@@ -663,7 +690,6 @@ class GameEngine():
         if isMove == False:
             self.CheckTransformatonDame(pionToMove + (numberChange))
         else:
-            self.CheckTransformatonDame(pionToMove + (numberChange * 2))
 
             #On regarde si il y a possiblité de prise multiple après une prise
 
@@ -672,9 +698,11 @@ class GameEngine():
             self.pionSelect = CaseFinale
             self.CasePriseMultiple = CaseFinale
 
-            if self.showPlaceToGo(CaseFinale) == "PionCanBeTake":
+            if self.showPlaceToGo(CaseFinale, False) == "PionCanBeTake":
                 self.Refresh(False)
                 return
+
+            self.CheckTransformatonDame(pionToMove + (numberChange * 2))
 
         self.priseMultiple = False
 
@@ -754,7 +782,7 @@ class GameEngine():
         #Debug
         print("PosX % 100 = ", PosX % 100)
         print("PosY % 100 = ", PosY % 100)
-
+     
         #On obtient l'id de la case en fonction d'où l'on a cliqué
         caseIdClicked = self.getCaseIdByPos(PosX, PosY)
 
@@ -777,6 +805,17 @@ class GameEngine():
                 self.pionSelect = 99
                 return
         
+        if self.hasAlreadyCheckedTake != True and self.priseMultiple == False:
+            self.listePionWhoCanTake = self.checkIfPionCanBeTake()
+
+        if self.listePionWhoCanTake != [] and self.priseMultiple == False:
+            self.deleteMoveGraphObject()
+            if caseIdClicked not in self.listePionWhoCanTake:
+                for i in self.listePionWhoCanTake:
+                    print("Create rectangle...")            
+                    self.canvas.create_rectangle(self.roundint(self.TableauDames[i].PosX, 50), self.roundint(self.TableauDames[i].PosY, 50), self.roundint(self.TableauDames[i].PosX, 50) + 50, self.roundint(self.TableauDames[i].PosY, 50) + 50 , outline = "red", width = 3, tags = "rectangleSelectPion")           
+                return
+
         if self.priseMultiple == False or self.priseMultiple == True:
 
             self.pionSelect = 0
@@ -797,7 +836,18 @@ class GameEngine():
             
                     self.canvas.create_rectangle(self.roundint(PosX, 50), self.roundint(PosY, 50), self.roundint(PosX, 50) + 50, self.roundint(PosY, 50) + 50 , outline = "yellow", width = 3, tags = "rectangleSelectPion")
             
-                    self.showPlaceToGo(self.pionSelect)
+                    self.showPlaceToGo(self.pionSelect, True)
+
+    def checkIfPionCanBeTake(self):
+        print("Check pion obligatoire..")
+        self.listePionCanTake = []
+        for i in range(len(self.TableauDames)):
+            if self.TableauDames[i].Couleur == self.teamToPlay and (self.TableauDames[i].Status == "Pion" or self.TableauDames[i].Status == "Pion"):
+                if self.showPlaceToGo(i, False):
+                    self.listePionCanTake.append(i)
+        self.hasAlreadyCheckedTake = True
+        return self.listePionCanTake
+
 
     def getCaseIdByPos(self, PosX, PosY): #Fonction permettant d'obtenir l'id d'un pion en fonction de l'emplacement clické
         for i in range(len(self.TableauDames)):
@@ -828,8 +878,10 @@ class GameEngine():
         for i in range(len(self.CercleChoixPossible)):
             self.canvas.delete(self.CercleChoixPossible[i])
 
-    def showPlaceToGo(self, pionSelect): #Montre les endroits possibles sur le damier
-        
+    def showPlaceToGo(self, pionSelect, drawCircle): #Montre les endroits possibles sur le damier
+
+        global Couleur_PionPreview
+
         pionSelect = pionSelect #Variable qui contiendra l'id du pion sélectionner
         canTakePion = False #Variable permettant de savoir si l'on peut prendre un pion
 
@@ -856,11 +908,14 @@ class GameEngine():
                 nbrPions = 0
                 while numberToMutiply < 9:
                     if pionSelect + (i * numberToMutiply) < 99 and pionSelect + (i * numberToMutiply) > 0:
+                        if self.TableauDames[pionSelect + (i * numberToMutiply)].Couleur == self.teamToPlay:
+                            nbrPions += 2
                         if self.TableauDames[pionSelect + (i * numberToMutiply)].Status == "Pion" or self.TableauDames[pionSelect + (i * numberToMutiply)].Status == "Dame":
-                               nbrPions += 1
+                               nbrPions += 1                      
                         if self.TableauDames[pionSelect + (i * numberToMutiply)].Status == "Null" and pionSelect + (i * numberToMutiply) not in listeInterdit:
                             if nbrPions == 0 or nbrPions == 1:
-                                self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + (i * numberToMutiply)].PosX - 5, self.TableauDames[pionSelect + (i * numberToMutiply)].PosY - 5, self.TableauDames[pionSelect + (i * numberToMutiply)].PosX + 5, self.TableauDames[pionSelect + (i * numberToMutiply)].PosY + 5, fill= "yellow"))
+                                if drawCircle:
+                                    self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + (i * numberToMutiply)].PosX - 5, self.TableauDames[pionSelect + (i * numberToMutiply)].PosY - 5, self.TableauDames[pionSelect + (i * numberToMutiply)].PosX + 5, self.TableauDames[pionSelect + (i * numberToMutiply)].PosY + 5, fill = Couleur_PionPreview))
                                 self.ListeCaseChoixPossible.append(pionSelect + (i * numberToMutiply)) 
                             else:
                                 canTakePion = True
@@ -869,19 +924,22 @@ class GameEngine():
          
         #Système de preview des pions normaux
 
-        for i in listeCheck: #On regarde si on peux manger un pion
-               if pionSelect + (i * 2) < 100 and pionSelect + (i * 2) > 0:
-                    if (self.TableauDames[pionSelect + (i)].Status == "Pion" or self.TableauDames[pionSelect + (i)].Status == "Dame") and self.TableauDames[pionSelect + (i * 2)].Status == "Null" and self.TableauDames[pionSelect + (i)].Equipe != self.TableauDames[pionSelect].Equipe and pionSelect + (i) not in listeInterdit and pionSelect + (i * 2) not in listeInterdit:   
-                       self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + (i * 2)].PosX - 5, self.TableauDames[pionSelect + (i * 2)].PosY - 5, self.TableauDames[pionSelect + (i * 2)].PosX + 5, self.TableauDames[pionSelect + (i * 2)].PosY + 5, fill= "yellow"))
-                       self.ListeCaseChoixPossible.append(pionSelect + (i * 2))
-                       canTakePion = True
+        if self.TableauDames[pionSelect].Status == "Pion":
+            for i in listeCheck: #On regarde si on peux manger un pion
+                   if pionSelect + (i * 2) < 100 and pionSelect + (i * 2) > 0:
+                        if (self.TableauDames[pionSelect + (i)].Status == "Pion" or self.TableauDames[pionSelect + (i)].Status == "Dame") and self.TableauDames[pionSelect + (i * 2)].Status == "Null" and self.TableauDames[pionSelect + (i)].Equipe != self.TableauDames[pionSelect].Equipe and pionSelect + (i) not in listeInterdit and pionSelect + (i * 2) not in listeInterdit:   
+                           if drawCircle:
+                                self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + (i * 2)].PosX - 5, self.TableauDames[pionSelect + (i * 2)].PosY - 5, self.TableauDames[pionSelect + (i * 2)].PosX + 5, self.TableauDames[pionSelect + (i * 2)].PosY + 5, fill= Couleur_PionPreview))
+                           self.ListeCaseChoixPossible.append(pionSelect + (i * 2))
+                           canTakePion = True
         
         if self.priseMultiple != True and canTakePion != True:
             for i in listeCheckDynamic:
                 if pionSelect + (i) < 100 and pionSelect + (i) > 0:
                     if self.TableauDames[pionSelect + (i)].Status == "Null" and pionSelect + (i) not in listeInterdit:
-                        self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + (i)].PosX - 5, self.TableauDames[pionSelect + (i)].PosY - 5,  self.TableauDames[pionSelect + (i)].PosX + 5, self.TableauDames[pionSelect + (i)].PosY + 5, fill= "yellow"))
-                        self.ListeCaseChoixPossible.append(pionSelect + (i))
+                       if drawCircle:
+                            self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + (i)].PosX - 5, self.TableauDames[pionSelect + (i)].PosY - 5,  self.TableauDames[pionSelect + (i)].PosX + 5, self.TableauDames[pionSelect + (i)].PosY + 5, fill= Couleur_PionPreview))
+                       self.ListeCaseChoixPossible.append(pionSelect + (i))
 
         if self.priseMultiple == True and self.ListeCaseChoixPossible != []:
             return "PionCanBeTake"
@@ -889,6 +947,11 @@ class GameEngine():
             return "NoPionCanBeTake"
        
         self.listeDameCantMove = [] 
+        
+        if canTakePion:
+            return True
+        else:
+            return False
          
 # --- Fonctions Graphiques et utilitaires ---
 

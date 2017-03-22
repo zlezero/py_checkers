@@ -10,6 +10,8 @@ from threading import Thread
 
 ##Variables de l'interface graphique et de jeu
 
+GEng = None
+
 Label_NbrPionsJ1 = None
 Label_NbrPionsJ2 = None
 Label_TourActuel = None
@@ -19,8 +21,9 @@ timeLeft = 180000
 Ip = ""
 isMultiplayer = False
 isHost = False
-
-GEng = None
+TableauDamesGlobal = []
+switchTurn = False
+modifTableau = False
 
 ## -- Toutes les différentes GUI --
 
@@ -184,7 +187,7 @@ class Multijoueur(): #Classe représentant le menu des options
 
     
     def Client(self):
-        global GEng, isHost; isMultiplayer
+        global GEng, isHost, isMultiplayer
 
         isHost = False
      
@@ -202,9 +205,12 @@ class Multijoueur(): #Classe représentant le menu des options
         global GEng
 
         while GEng.isConnected == False:
+            print("Wait for connection...")
             if GEng.isConnected:
+                print("Opening GameWindow...")
                 self.Label_ConnectInfo.config(text = "Connexion établie !")
                 self.Open_GameWindow()
+                break
 
                          
     def CheckBox_Tick(self):
@@ -402,6 +408,7 @@ class GameEngine():
         self.Hote = ""
         self.Port = 12800
         self.Ip = Ip
+        self.switchTurn = False
 
         self.teamToPlay = "Noir"
         self.canvas = canvas        
@@ -428,18 +435,33 @@ class GameEngine():
         self.connexion_principale.bind((self.Hote, self.Port))
         self.connexion_principale.listen(5)
         self.serveur_lance = True
+        self.isMultiplayer = True
         print("Le serveur écoute à présent sur le port {}".format(self.Port))
 
         while self.serveur_lance == True:
             self.Serveur_WaitMessage()
 
     def Serveur_WaitMessage(self):
+        global TableauDamesGlobal, modifTableau
+
         self.connexion_avec_client, self.infos_connexion = self.connexion_principale.accept()
         self.isConnected = True
+        print("Client connect !")
         self.msg_recu = ""
         while self.msg_recu != b"fin":
-            self.msg_recu = self.connexion_avec_client.recv(4096)
-
+            print("Check message !")
+            if self.switchTurn != True:
+                print("Try to recieve message !")
+                self.msg_recu = self.connexion_avec_client.recv(4096)
+                if self.msg_recu != "":
+                    self.msg_recu = pickle.loads(self.msg_recu)
+                    print(self.msg_recu)
+                    TableauDamesGlobal = self.msg_recu
+                    self.switchTurn = False
+                    modifTableau = True
+                    self.Refresh(True)
+            else:
+                self.Serveur_SendMessage(pickle.dumps(TableauDamesGlobal))
 
     def Serveur_SendMessage(self, messageToSend):
         print("Sending message !")
@@ -451,26 +473,44 @@ class GameEngine():
         self.connexion_principale.close()
 
     def Client_Init(self):
+
+        global TableauDamesGlobal, switchTurn
+
         self.connexion_avec_serveur = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connexion_avec_serveur.connect((self.Ip, self.Port))
         print("Connexion établie avec le serveur sur le port {}".format(self.Port))
         self.isConnected = True
+        self.isMultiplayer = True
 
+        while True:
+            print("Boucle client...")
+            if switchTurn:
+                print("Send message client...")
+                self.Client_SendMessage(pickle.dumps(TableauDamesGlobal))
+                self.switchTurn = False
+                self.TableauDames = self.Client_WaitMessage()
+                self.Refresh(True)
+            print("Sleep...")
+            time.sleep(0.1)
+
+
+        
     def Client_WaitMessage(self):
         print("Waiting for message...")
-        msg_recu = ""
-        while msg_a_envoyer == "":
-            msg_recu = self.connexion_avec_serveur.recv(4096)
-            print("Message reçu")
-            return msg_recu
+        self.msg_recu = ""
+        while self.msg_a_envoyer == "":
+            self.msg_recu = self.connexion_avec_serveur.recv(4096)
+            if self.msg_recu != "":
+                print("Message reçu")
+                return self.msg_recu
 
     def Client_SendMessage(self, messageToSend):
         print("Sending message...")
-        msg_a_envoyer = b""
-        while msg_a_envoyer != b"fin":
-            msg_a_envoyer = messageToSend
+        self.msg_a_envoyer = b""
+        while self.msg_a_envoyer != b"fin":
+            self.msg_a_envoyer = messageToSend
             # On envoie le message
-            connexion_avec_serveur.send(msg_a_envoyer)
+            self.connexion_avec_serveur.send(self.msg_a_envoyer)
 
     def Client_CloseConnection(self):
         print("Closing connection to the server !")
@@ -518,7 +558,14 @@ class GameEngine():
 
     def Tour(self, newTurn, isSkip): #Fonction s'executant à la fin de chaque tour
         
-        global timeLeft
+        global timeLeft, TableauDamesGlobal, switchTurn, modifTableau
+
+        print("New Turn !")
+
+        if modifTableau == True:
+            self.TableauDames == TableauDamesGlobal
+            modifTableau = False
+        TableauDamesGlobal = self.TableauDames
 
         if self.TableauJoueurs[0].nbrPions == 0:
             messagebox.showinfo("Gagné !!!", "J2 Won")
@@ -536,14 +583,16 @@ class GameEngine():
             else:
                 self.teamToPlay = "Blanc"
 
-        if self.isMultiplayer == True and self.isConnected == True:
-            if self.isHost == True:
-                if self.networkTeam == self.teamToPlay:
-                    self.Serveur_SendMessage(pickle.dump(self.TableauDames))
-            else:
-                self.Client_SendMessage(pickle.dump(self.TableauDames))
-                self.ThreadWait_Client = Thread(target = self.Client_WaitMessage)
-                self.ThreadWait_Client.start()
+        if self.isMultiplayer == True:
+            print("Switch Turn Multiplayer !")
+            switchTurn = True
+            #if self.isHost == True:
+                #if self.networkTeam == self.teamToPlay:
+                    #self.Serveur_SendMessage(pickle.dump(self.TableauDames))
+            #else:
+                #self.Client_SendMessage(pickle.dump(self.TableauDames))
+                #self.ThreadWait_Client = Thread(target = self.Client_WaitMessage)
+                #self.ThreadWait_Client.start()
 
         if self.TableauJoueurs[0].isAi == True or self.TableauJoueurs[1].isAi == True:
             self.IA()
@@ -794,25 +843,27 @@ class GameEngine():
                 self.TableauDames[pionSelect].Status = "Dame"
     
     def showTerrainFromPionPlace(self): #Fonction qui affiche les pions en fonction du tableau
+        global TableauDamesGlobal
+
         i = 0 
         x = 0
         cercleX = -25
         cercleY = 25    
 
-        while i < len(self.TableauDames): #Selon le status de chaque pion dans le tableau on l'affiche graphiquement sur le damier
+        while i < len(TableauDamesGlobal): #Selon le status de chaque pion dans le tableau on l'affiche graphiquement sur le damier
             x = 0
             while x < 10:
                 cercleX += 50
-                if self.TableauDames[i].Status != "Null":
-                    if self.TableauDames[i].Couleur == "Blanc" and self.TableauDames[i].Status == "Dame":
+                if TableauDamesGlobal[i].Status != "Null":
+                    if TableauDamesGlobal[i].Couleur == "Blanc" and TableauDamesGlobal[i].Status == "Dame":
                         self.listePionGraphique.append(self.cercle(cercleX, cercleY, 25, "red"))
                         self.listePionGraphique.append(self.cercle(cercleX, cercleY, 20, "ivory"))
-                    elif self.TableauDames[i].Couleur == "Noir" and self.TableauDames[i].Status == "Dame":
+                    elif TableauDamesGlobal[i].Couleur == "Noir" and TableauDamesGlobal[i].Status == "Dame":
                         self.listePionGraphique.append(self.cercle(cercleX, cercleY, 25, "red"))
                         self.listePionGraphique.append(self.cercle(cercleX, cercleY, 20, "brown"))
-                    elif self.TableauDames[i].Couleur == "Blanc":
+                    elif TableauDamesGlobal[i].Couleur == "Blanc":
                         self.listePionGraphique.append(self.cercle(cercleX, cercleY, 20, "ivory"))
-                    elif self.TableauDames[i].Couleur == "Noir":
+                    elif TableauDamesGlobal[i].Couleur == "Noir":
                         self.listePionGraphique.append(self.cercle(cercleX, cercleY, 20, "brown"))                  
                 i += 1
                 x += 1
