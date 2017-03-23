@@ -1,5 +1,5 @@
 import time
-import winsound
+#import winsound
 import random
 import tkinter.ttk as tkk
 from threading import Thread
@@ -12,6 +12,8 @@ Label_NbrPionsJ1 = None
 Label_NbrPionsJ2 = None
 Label_TourActuel = None
 Label_Timer = None
+Button_SkipTour = None
+
 timeLeft = 180000
 
 #Variable pour la personnalisation
@@ -22,6 +24,8 @@ Couleur_DamierNoir = "black"
 Couleur_DameBlancCouleur = "ivory"
 Couleur_DameNoirCouleur = "red"
 Couleur_PionPreview = "yellow"
+
+priseMultiple = False
 
 ## -- Toutes les différentes GUI --
 
@@ -34,6 +38,9 @@ class MainMenu(): #Classe représentant le menu principal
 
         Root.title("Jeu de Dames - Menu Principal")
         
+        self.can = Canvas(self.frame, width = 500, height = 500, bg = "ivory")
+        self.can.pack()
+        
         self.Draw_Interface()
         
         self.frame.pack()
@@ -41,13 +48,13 @@ class MainMenu(): #Classe représentant le menu principal
     def Draw_Interface(self):
         self.Thread_MainMenuSound = Thread(target = self.Play_Music) 
         self.Thread_MainMenuSound.start()
-        self.PlayButton1V1 = Button(self.frame, text = "1 VS 1", width = 25, command = self.Open_GameWindow1V1)
+        self.PlayButton1V1 = Button(self.can, text = "1 VS 1", width = 25, command = self.Open_GameWindow1V1)
         self.PlayButton1V1.pack()
-        self.PlayButton1VIA = Button(self.frame, text = "1 VS IA", width = 25, command = self.Open_GameWindow1VIA)
+        self.PlayButton1VIA = Button(self.can, text = "1 VS IA", width = 25, command = self.Open_GameWindow1VIA)
         self.PlayButton1VIA.pack()
-        self.OptionsButton = Button(self.frame, text = "Options", width = 25, command = self.Open_OptionsWindow)
+        self.OptionsButton = Button(self.can, text = "Options", width = 25, command = self.Open_OptionsWindow)
         self.OptionsButton.pack()
-        self.quitButton = Button(self.frame, text = 'Quitter', width = 25 , command = self.Close_Window)
+        self.quitButton = Button(self.can, text = 'Quitter', width = 25 , command = self.Close_Window)
         self.quitButton.pack()
 
     def Hide_Window(self):
@@ -284,7 +291,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
     
     def draw_Interface(self): #Fonction dessinant l'interface principale
         
-        global Label_NbrPionsJ1, Label_NbrPionsJ2, Label_TourActuel, timeLeft, Label_Timer
+        global Label_NbrPionsJ1, Label_NbrPionsJ2, Label_TourActuel, timeLeft, Label_Timer, Button_SkipTour
         
         #Stockage du texte
         
@@ -313,8 +320,8 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.Button_ReturnToMenu.pack(side = BOTTOM, pady =3)
         self.Button_Restart = Button(self.frame, text='Redémarrer', command = self.Restart_Game)
         self.Button_Restart.pack(side = BOTTOM, padx =3, pady =3)
-        self.Button_SkipTour = Button(self.frame, text='Passer le tour', command = self.Skip_Turn)
-        self.Button_SkipTour.pack(side = BOTTOM, padx =5, pady =5)
+        Button_SkipTour = Button(self.frame, text='Passer le tour', command = self.Skip_Turn)
+        Button_SkipTour.pack(side = BOTTOM, padx =5, pady =5)
         
 
     def Hide_Window(self):
@@ -343,8 +350,10 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
             self.GEng.StartGame(2)
 
     def Skip_Turn(self):
+        global priseMultiple
         print("Skipping turn !")
-        self.GEng.Tour(True, True)
+        if priseMultiple == False:
+            self.GEng.Tour(True, True)
 
     def Close_Window(self): #Fonction permettant de fermer la fenêtre
         self.master.destroy()
@@ -386,7 +395,7 @@ class Case():
 class GameEngine():
     
     def __init__(self, canvas):
-        
+        global priseMultiple
         self.teamToPlay = "Noir"
         self.canvas = canvas        
         self.TableauDames = [None] * 100
@@ -400,13 +409,14 @@ class GameEngine():
         self.listePionWhoCanTake = []
         self.hasAlreadyCheckedTake = False
         self.caseIdPionSelect = 0
+        self.RectanglePriseObligatoire = []
         
         self.listePionGraphique = []
         
         self.BlancSkip = True
         self.NoirSkip = True
 
-        self.priseMultiple = False
+        self.priseMultiple = priseMultiple
         self.CasePriseMultiple = 0
 
     def StartGame(self, nombreJoueurs): #Fonction se lançant au début de la partie
@@ -488,7 +498,7 @@ class GameEngine():
                 PosX += 50
                 self.TableauDames[i+1] = Case("Noir", PosX, PosY, "Pion", "1")
             elif (i >= 10 and i <= 20) or (i >= 30 and i < 40):
-                self.TableauDames[i] = Case("Noir", PosX, PosY, "Pion", "1")
+                self.TableauDames[i] = Case("Noir", PosX, PosY, "Dame", "1")
                 PosX += 50
                 self.TableauDames[i+1] = Case("Null", PosX, PosY, "Null", "0")
             elif i >= 40 and i < 60:
@@ -522,7 +532,7 @@ class GameEngine():
     
     
     def movePion(self, PionSelect, Direction, CaseFinale): #Fonction gérant le déplacement des pions
-        
+        global priseMultiple
         self.priseMultiple = False
         pionToMove = PionSelect
         CaseFinale = CaseFinale
@@ -694,6 +704,7 @@ class GameEngine():
             #On regarde si il y a possiblité de prise multiple après une prise
 
             self.priseMultiple = True
+            priseMultiple = self.priseMultiple
             self.isPionSelect = True
             self.pionSelect = CaseFinale
             self.CasePriseMultiple = CaseFinale
@@ -705,6 +716,7 @@ class GameEngine():
             self.CheckTransformatonDame(pionToMove + (numberChange * 2))
 
         self.priseMultiple = False
+        priseMultiple = self.priseMultiple
 
         self.Refresh(True)
 
@@ -804,6 +816,7 @@ class GameEngine():
                 self.isPionSelect = False
                 self.pionSelect = 99
                 return
+                
         
         if self.hasAlreadyCheckedTake != True and self.priseMultiple == False:
             self.listePionWhoCanTake = self.checkIfPionCanBeTake()
@@ -812,10 +825,11 @@ class GameEngine():
             self.deleteMoveGraphObject()
             if caseIdClicked not in self.listePionWhoCanTake:
                 for i in self.listePionWhoCanTake:
-                    print("Create rectangle...")            
-                    self.canvas.create_rectangle(self.roundint(self.TableauDames[i].PosX, 50), self.roundint(self.TableauDames[i].PosY, 50), self.roundint(self.TableauDames[i].PosX, 50) + 50, self.roundint(self.TableauDames[i].PosY, 50) + 50 , outline = "red", width = 3, tags = "rectangleSelectPion")           
+                    print("Create rectangle...")
+                    self.RectanglePriseObligatoire = []            
+                    self.RectanglePriseObligatoire.append(self.canvas.create_rectangle(self.roundint(self.TableauDames[i].PosX, 50), self.roundint(self.TableauDames[i].PosY, 50), self.roundint(self.TableauDames[i].PosX, 50) + 50, self.roundint(self.TableauDames[i].PosY, 50) + 50 , outline = "red", width = 3, tags = "rectanglePionObligatoire"))           
                 return
-
+        
         if self.priseMultiple == False or self.priseMultiple == True:
 
             self.pionSelect = 0
@@ -842,12 +856,11 @@ class GameEngine():
         print("Check pion obligatoire..")
         self.listePionCanTake = []
         for i in range(len(self.TableauDames)):
-            if self.TableauDames[i].Couleur == self.teamToPlay and (self.TableauDames[i].Status == "Pion" or self.TableauDames[i].Status == "Pion"):
+            if self.TableauDames[i].Couleur == self.teamToPlay and (self.TableauDames[i].Status == "Pion" or self.TableauDames[i].Status == "Dame"):
                 if self.showPlaceToGo(i, False):
                     self.listePionCanTake.append(i)
         self.hasAlreadyCheckedTake = True
         return self.listePionCanTake
-
 
     def getCaseIdByPos(self, PosX, PosY): #Fonction permettant d'obtenir l'id d'un pion en fonction de l'emplacement clické
         for i in range(len(self.TableauDames)):
@@ -866,7 +879,6 @@ class GameEngine():
             if (PosX % 100) < 25:
                 if self.TableauDames[i].PosX == self.roundint(PosX, 25) + 25 and self.TableauDames[i].PosY == self.roundint(PosY, 25) + 25:
                     print("Pion found at PosX :", PosX, "Pos Y :", PosY, "i :", i)
-                    return i
             else:
                 if self.TableauDames[i].PosX == self.roundint(PosX, 25) and self.TableauDames[i].PosY == self.roundint(PosY, 25):
                     print("Pion found at PosX :", PosX, "Pos Y :", PosY, "i :", i)
@@ -875,8 +887,11 @@ class GameEngine():
 
     def deleteMoveGraphObject(self): #Fonction qui permet de supprimer les éléments graphiques relatifs à la selection d'un pion
         self.delete("rectangleSelectPion")
+        self.delete("rectanglePionObligatoire")
         for i in range(len(self.CercleChoixPossible)):
             self.canvas.delete(self.CercleChoixPossible[i])
+        for i in range(len(self.RectanglePriseObligatoire)):
+            self.canvas.delete(self.RectanglePriseObligatoire[i])
 
     def showPlaceToGo(self, pionSelect, drawCircle): #Montre les endroits possibles sur le damier
 
@@ -917,6 +932,7 @@ class GameEngine():
                                 if drawCircle:
                                     self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauDames[pionSelect + (i * numberToMutiply)].PosX - 5, self.TableauDames[pionSelect + (i * numberToMutiply)].PosY - 5, self.TableauDames[pionSelect + (i * numberToMutiply)].PosX + 5, self.TableauDames[pionSelect + (i * numberToMutiply)].PosY + 5, fill = Couleur_PionPreview))
                                 self.ListeCaseChoixPossible.append(pionSelect + (i * numberToMutiply)) 
+                                canTakePion = True
                             else:
                                 canTakePion = True
                     numberToMutiply += 1
