@@ -1,7 +1,10 @@
-import time
+﻿import time
 import random
+import socket
+import select
+import pickle
 import tkinter.ttk as tkk
-from threading import Thread
+from threading import Thread, RLock
 from tkinter import messagebox
 from tkinter import *
 
@@ -25,6 +28,16 @@ Couleur_DameNoirCouleur = "red"
 Couleur_PionPreview = "yellow"
 
 priseMultiple = False
+
+#Variables multijoueur
+
+NetworkClass = None
+isConnected = False
+isHost = False
+switchTurn = False
+verrou = RLock()
+TableauDameGlobal = []
+modifTableauDame = False
 
 ## -- Toutes les différentes GUI --
 
@@ -54,6 +67,8 @@ class MainMenu(): #Classe représentant le menu principal
         self.PlayButton1V1.pack()
         self.PlayButton1VIA = Button(self.can, text = "1 VS IA", width = 25, command = self.Open_GameWindow1VIA)
         self.PlayButton1VIA.pack()
+        self.Multiplayer_Button = Button(self.can, text = "Multijoueur", width = 25, command = self.Open_MultiplayerWindow)
+        self.Multiplayer_Button.pack()
         self.OptionsButton = Button(self.can, text = "Options", width = 25, command = self.Open_OptionsWindow)
         self.OptionsButton.pack()
         self.quitButton = Button(self.can, text = 'Quitter', width = 25 , command = self.Close_Window)
@@ -83,12 +98,19 @@ class MainMenu(): #Classe représentant le menu principal
         self.Hide_Window()
         self.newWindow = Toplevel(self.master)
         self.app = Jeu(self.newWindow, 1)
+
+    def Open_MultiplayerWindow(self):
+        Root.title("Jeu de Dames - Multijoueur")
+        self.Hide_Window()
+        self.newWindow = Toplevel(self.master)
+        self.app = Multijoueur(self.newWindow)
     
     def Open_OptionsWindow(self): #Fonction ouvrant la fenêtre des options
         Root.title("Jeu de Dames - Options")
         self.Hide_Window()
         self.newWindow = Toplevel(self.master)
         self.app = Options(self.newWindow)
+
 
 class Options(): #Classe représentant le menu des options
     
@@ -263,7 +285,261 @@ class Options(): #Classe représentant le menu des options
 
     def Close_Window(self): #Fonction permettant de fermer la fenêtre
         self.master.destroy()
+
+class Multijoueur(): #Classe représentant le menu multijoueur
+    
+    def __init__(self, master): #Initialisation de l'interface et de la classe
+
+        self.master = master
+        self.Frame = Frame(master)
+
+        self.isHost = 0
+
+        self.Ip = ""
+
+        self.Draw_Interface()
+
+        self.Frame.pack()
+
+    def Draw_Interface(self):
+
+        self.Label_InfoIp = Label(self.Frame, text = "Adresse ip : ")
+        self.Label_InfoIp.pack()
+
+        self.Textbox_Ip = Entry(self.Frame, textvariable = self.Ip)
+        self.Textbox_Ip.pack()
+
+        self.CheckBox_isHost = Checkbutton(self.Frame, text = "Host ?", variable = self.isHost, command = self.CheckBox_Tick)
+        self.CheckBox_isHost.pack()
+
+        self.Button_Launch = Button(self.Frame, text = "Lancer", command = self.Launch_Multijoueur)
+        self.Button_Launch.pack()
+
+        self.Button_Return = Button(self.Frame, text = "Retourner au menu", command = self.Open_MainMenuWindow)
+        self.Button_Return.pack()
+
+        self.Label_ConnectInfo = Label(self.Frame, text = "Attente d'un client !")
+        self.Label_ConnectInfo.pack_forget()
+
+    def Launch_Multijoueur(self):
+
+        global NetworkClass, isHost
+
+        self.Ip = self.Textbox_Ip.get()
+
+        isMultiplayer = True
+
+        if self.isHost == 0 and self.Ip != "":
+            print("Launching client...")
+
+            isHost = False
+            NetworkClass = Network(self.Ip, False)
+            self.Client()
+
+        elif self.isHost == 1:
+            print("Launching host...")
+
+            isHost = True
+            NetworkClass = Network(self.Ip, True)
+            self.Host()
+
+        else:
+            messagebox.showerror("Erreur", "Configuration invalide !")
+            
+
+    def Host(self):
+
+        global NetworkClass
+
+        print("Hosting...")
+        self.Serveur = Thread(target = NetworkClass.Serveur_Init)
+        self.Serveur.start()
+
+        self.Label_ConnectInfo.config(text = "Attente d'un client !")
+        self.Label_ConnectInfo.pack()
+
+        self.WaitThread = Thread(target = self.WaitForConnection)
+        self.WaitThread.start()
+
+    
+    def Client(self):
+
+        global NetworkClass
+
+        print("Connecting...")
+
+        self.Client = Thread(target = NetworkClass.Client_Init)
+        self.Client.start()
+
+        self.Label_ConnectInfo.config(text = "Tentative de connexion...")
+        self.Label_ConnectInfo.pack()
+
+        self.WaitThread = Thread(target = self.WaitForConnection)
+        self.WaitThread.start()
+
+    def WaitForConnection(self):
+
+        global isConnected
+
+        while isConnected == False:
+            print("Wait for connection...")
+            if isConnected:
+                print("Opening GameWindow...")
+                self.Label_ConnectInfo.config(text = "Connexion établie !")
+                self.Open_GameWindow()
+                break
+
+                         
+    def CheckBox_Tick(self):
+        if self.isHost == 0:
+            self.isHost = 1
+        else:
+            self.isHost = 0
+
+    def Open_MainMenuWindow(self):
+        Root.title("Jeu de Dames - Menu Principal")
+        self.Hide_Window()
+        self.newWindow = Toplevel(self.master)
+        self.app = MainMenu(self.newWindow)
+
+    def Open_GameWindow(self): #Fonction ouvrant la fenêtre de jeu
+        Root.title("Jeu de Dames - Jeu")
+        self.Hide_Window()
+        self.newWindow = Toplevel(self.master)
+        self.app = Jeu(self.newWindow, 1)
+
+    def Hide_Window(self):
+        self.isHost = 0
+        self.CheckBox_isHost.deselect()
+        self.master.withdraw()
+
+    def Show_Window(self):
+        self.master.update()
+        self.master.deiconify()
+
+    def Close_Window(self): #Fonction permettant de fermer la fenêtre
+        self.master.destroy()
+         
+class Network():
+
+    def __init__(self, ip, isHost):
+
+        self.Ip = ip
+        self.isHost = isHost
+        self.Port = 12800
+        self.Hote = ""
+        self.game_Launch = False
+
+    def Serveur_Init(self):
+       global verrou
+       
+       
+       self.connexion_principale = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+       self.connexion_principale.bind((self.Hote, self.Port))
+       self.connexion_principale.listen(5)
+       self.serveur_lance = True
+       self.isMultiplayer = True
+       print("Le serveur écoute à présent sur le port {}".format(self.Port))
+
+       while self.serveur_lance == True:
+            self.Serveur_WaitMessage()
+
+    def Serveur_WaitMessage(self):
+
+        global TableauDameGlobal, isConnected, switchTurn, modifTableauDame, verrou
+
+        self.ThreadSend = Thread(target = self.Serveur_WaitForSendingMessage)
+        self.ThreadSend.start()
+
+        self.connexion_avec_client, self.infos_connexion = self.connexion_principale.accept()
+        isConnected = True
+
+        print("Client connect !")
+
+        self.msg_recu = ""
+
+        while self.msg_recu != b"fin":
+            print("Check message !")
+            print("Try to recieve message !")
+            self.msg_recu = self.connexion_avec_client.recv(10000)
+            if self.msg_recu != "":
+                self.msg_recu = pickle.loads(self.msg_recu)
+                print(self.msg_recu)
+                TableauDameGlobal = self.msg_recu
+                switchTurn = False
+                modifTableauDame = True
+                self.msg_recu = ""
+
+    def Serveur_WaitForSendingMessage(self):
+        global switchTurn, verrou
+
+        while True:
+            print("Check if turn switch...")
+            if switchTurn:
+                print("Send message to client..")
+                self.Serveur_SendMessage(pickle.dumps(TableauDameGlobal))
+                switchTurn = False
+            time.sleep(0.1)
+
+    def Serveur_SendMessage(self, messageToSend):
+        print("Sending message !")
+        self.connexion_avec_client.send(messageToSend)
+
+    def Serveur_StopServer(self):
+        print("Stopping server connection !")
+        self.connexion_avec_client.close()
+        self.connexion_principale.close()
+
+    def Client_Init(self):
+
+        global TableauDameGlobal, switchTurn, isConnected, verrou
+
+        self.connexion_avec_serveur = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.connexion_avec_serveur.connect((self.Ip, self.Port))
+        print("Connexion établie avec le serveur sur le port {}".format(self.Port))
+        isConnected = True
+        self.isMultiplayer = True
+
+        while True:
+            print("Boucle client...")
+            if switchTurn:
+                print("Send message client...")
+                self.Client_SendMessage(pickle.dumps(TableauDameGlobal))
+                switchTurn = False
+                print("Start to wait for message...")
+                TableauDameGlobal = self.Client_WaitMessage()
+
+            print("Sleep...")
+            time.sleep(0.1)
+
+
         
+    def Client_WaitMessage(self):
+        global verrou
+
+
+        print("Waiting for message...")
+        self.msg_recu = ""
+        while self.msg_recu == "":
+            self.msg_recu = self.connexion_avec_serveur.recv(10000)
+            if self.msg_recu != "" and len(self.msg_a_envoyer) < 100:
+                print("Message reçu")
+                return self.msg_recu
+            else:
+                self.msg_recu = ""
+            time.sleep(0.1)
+
+    def Client_SendMessage(self, messageToSend):
+        print("Sending message...")
+        self.msg_a_envoyer = ""
+        self.msg_a_envoyer = messageToSend
+        # On envoie le message
+        self.connexion_avec_serveur.send(self.msg_a_envoyer)
+
+    def Client_CloseConnection(self):
+        print("Closing connection to the server !")
+        self.connexion_avec_serveur.close()
+
 class Jeu(): #Classe représentant l'interface du jeu de dames
     
     def __init__(self, master, nbrJoueurs): #Initialisation de l'interface et de la classe
@@ -296,7 +572,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
     
     def draw_Interface(self): #Fonction dessinant l'interface principale
         
-        global Label_NbrPionsJ1, Label_NbrPionsJ2, Label_TourActuel, timeLeft, Label_Timer, Button_SkipTour
+        global Label_NbrPionsJ1, Label_NbrPionsJ2, Label_TourActuel, timeLeft, Label_Timer, Button_SkipTour, isHost
         
         #Stockage du texte
         
@@ -305,6 +581,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.tourActuel = "Equipe jouant : Blanc"
         
         # -- Affichage du texte --
+
         self.Label_Joueur1 = Label(self.frame, text = "-- Joueur 1 --")
         self.Label_Joueur1.pack()
         Label_NbrPionsJ1 = Label(self.frame, text = self.nbrPionsRestantsJ1_Text)
@@ -319,7 +596,13 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         Label_TourActuel.pack()
         Label_Timer = Label(self.frame, text = "Temps restant : {}.{}".format(self.ConvertTime(timeLeft, False), self.ConvertTime(timeLeft, True)))
         Label_Timer.pack(pady = 10)
-        
+
+        if isHost == True:
+            self.Label_Host = Label(self.frame, text = "Host - Equipe Noire")
+        else:
+            self.Label_Host = Label(self.frame, text = "Client - Equipe Blanche")
+        self.Label_Host.pack()
+
         #-- Affichage des boutons
         self.Button_ReturnToMenu = Button(self.frame, text = "Retourner au menu", command = self.Open_MainMenuWindow)
         self.Button_ReturnToMenu.pack(side = BOTTOM, pady =3)
@@ -424,6 +707,8 @@ class GameEngine():
         self.priseMultiple = priseMultiple
         self.CasePriseMultiple = 0
 
+        self.isFirstTurn = True
+
     def StartGame(self, nombreJoueurs): #Fonction se lançant au début de la partie
         print("Start / Restart Game")
 
@@ -462,9 +747,12 @@ class GameEngine():
 
     def Tour(self, newTurn, isSkip): #Fonction s'executant à la fin de chaque tour
         
-        global timeLeft
+        global timeLeft, NetworkClass, isHost, switchTurn, verrou, TableauDameGlobal
+
 
         self.hasAlreadyCheckedTake = False
+
+        TableauDameGlobal = self.TableauDames
 
         if self.TableauJoueurs[0].nbrPions == 0:
             messagebox.showinfo("Gagné !!!", "J2 Won")
@@ -475,19 +763,56 @@ class GameEngine():
         self.pionSelect = 0
         self.deleteMoveGraphObject()
 
+
+        if NetworkClass != None and ((self.isFirstTurn == False and isHost == False) or (self.isFirstTurn == True and isHost == True) or (self.isFirstTurn == False and isHost == True)):
+            print("Switching turn...")
+
+            if (self.isFirstTurn == False and isHost == False) or (self.isFirstTurn == False and isHost == True):
+                if isHost == True:
+                    switchTurn = ""
+                else:
+                    switchTurn = True
+
+            self.Refresh(False)
+
+            WaitThread = Thread(target = self.WaitForResponse)
+            WaitThread.start()
+
+            WaitThread.join()
+  
+            self.TableauDames = TableauDameGlobal  
+                
+            self.Refresh(False)
+                
+            if self.isFirstTurn == True and isHost == True:
+                newTurn = False   
+        
         if newTurn == True:
 
-            if (self.teamToPlay == "Blanc" and self.BlancSkip == True) or (self.teamToPlay == "Blanc" and self.BlancSkip == False and self.isSkip == True):
-                self.teamToPlay = "Noir"
-            else:
-                self.teamToPlay = "Blanc"
+          if (self.teamToPlay == "Blanc" and self.BlancSkip == True) or (self.teamToPlay == "Blanc" and self.BlancSkip == False and self.isSkip == True):
+              self.teamToPlay = "Noir"
+          else:
+              self.teamToPlay = "Blanc"
 
         if self.TableauJoueurs[0].isAi == True or self.TableauJoueurs[1].isAi == True:
             self.IA()
 
-        timeLeft = 180000                   
+
+        timeLeft = 180000    
+        
+        self.isFirstTurn = False
+                       
         self.UpdateGui()
-            
+           
+    def WaitForResponse(self):
+        global modifTableauDame, verrou
+
+        while modifTableauDame == False:
+            print("Waiting for response...")
+            time.sleep(0.1)
+
+        modifTableauDame = False
+        return
 
     def GenerateTableauPion(self): #Fonction gérant la position initiale des pions
         
@@ -632,128 +957,6 @@ class GameEngine():
 
               CaseFinale = pionToMove + (numberChange * 2)
 
-        #if self.TableauDames[pionToMove].Status == "Dame":
-            
-        #    #Système pour bouger la dame du point de départ au point d'arrivée
-        #    TempV = self.TableauDames[CaseFinale]
-        #    TempOld = self.TableauDames[pionToMove]
-            
-        #    PosXNew = TempOld.PosX
-        #    PosYNew = TempOld.PosY
-
-        #    self.TableauDames[CaseFinale] = self.TableauDames[pionToMove]
-            
-        #    self.TableauDames[CaseFinale].PosX = TempV.PosX
-        #    self.TableauDames[CaseFinale].PosY = TempV.PosY
-            
-        #    TempV.PosX = PosXNew
-        #    TempV.PosY = PosYNew
-            
-        #    self.TableauDames[pionToMove] = TempV
-
-        #    #Système pour prendre un pion si il y en a un sur le trajet
-
-        #    elementToMultiply = 0
-
-        #    for i in range(9):
-        #        elementToMultiply += 1
-        #        if CaseFinale - (numberChange * elementToMultiply) < 100 and CaseFinale - (numberChange * elementToMultiply) > 0:
-        #            if (self.TableauDames[CaseFinale - (numberChange * elementToMultiply)].Status == "Pion" or self.TableauDames[CaseFinale - (numberChange * elementToMultiply)].Status == "Dame") and self.TableauDames[CaseFinale - (numberChange * elementToMultiply)].Equipe != self.TableauDames[CaseFinale].Equipe:
-                        
-        #                if self.TableauDames[CaseFinale - (numberChange * elementToMultiply)].Equipe == "1":
-        #                    self.TableauJoueurs[0].nbrPions -= 1
-        #                else:
-        #                    self.TableauJoueurs[1].nbrPions -= 1
-                       
-        #                self.TableauDames[CaseFinale - (numberChange * elementToMultiply)].Status = "Null"
-        #                self.TableauDames[CaseFinale - (numberChange * elementToMultiply)].Couleur = "Null"
-        #                self.TableauDames[CaseFinale - (numberChange * elementToMultiply)].Equipe = "0"                 
-
-        #                isMove = True
-        #                break
-                
-        #elif self.TableauDames[pionToMove + (numberChange)].Status == "Null": #Si l'endroit ou le pion doit aller est vide
-        
-        #    TempV = self.TableauDames[pionToMove + (numberChange)]
-        #    TempOld = self.TableauDames[pionToMove]
-            
-        #    PosXNew = TempOld.PosX
-        #    PosYNew = TempOld.PosY
-
-        #    self.TableauDames[pionToMove + (numberChange)] = self.TableauDames[pionToMove]
-            
-        #    self.TableauDames[pionToMove + (numberChange)].PosX = TempV.PosX
-        #    self.TableauDames[pionToMove + (numberChange)].PosY = TempV.PosY
-            
-        #    TempV.PosX = PosXNew
-        #    TempV.PosY = PosYNew
-            
-        #    self.TableauDames[pionToMove] = TempV
-            
-        #    CaseFinale = pionToMove + (numberChange)
-
-        #    print("DEBUG : New pos :", pionToMove + (numberChange))
-            
-        #elif self.TableauDames[pionToMove + (numberChange)].Equipe == "2" and self.TableauDames[pionToMove].Equipe == "1") or (self.TableauDames[pionToMove + (numberChange)].Equipe == "1" and self.TableauDames[pionToMove].Equipe == "2" #On regarde si on peut prendre un pion
-        
-        #    if self.TableauDames[pionToMove + (numberChange * 2)].Status == "Null": #Si une case est libre après le pion
-                
-        #        #Initialisation des différentes variables
-
-        #        TempPionOriginal = self.TableauDames[pionToMove]
-
-        #        TempPionTake = self.TableauDames[pionToMove + (numberChange)]
-
-        #        TempPionNewCase = self.TableauDames[pionToMove + (numberChange * 2)]
-                
-        #        PosX_PionOriginal = TempPionOriginal.PosX
-        #        PosY_PionOriginal = TempPionOriginal.PosY
-
-        #        PosX_PionTake = TempPionTake.PosX
-        #        PosY_PionTake = TempPionTake.PosY
-
-        #        PosX_PionNewCase = TempPionNewCase.PosX
-        #        PosY_PionNewCase = TempPionNewCase.PosY
-
-        #        #On bouge le pion qui mange l'autre
-
-        #        self.TableauDames[pionToMove + (numberChange * 2)], self.TableauDames[pionToMove] = self.TableauDames[pionToMove], self.TableauDames[pionToMove + (numberChange * 2)]
-        #        self.TableauDames[pionToMove + (numberChange * 2)].PosX = self.TableauDames[pionToMove].PosX
-        #        self.TableauDames[pionToMove + (numberChange * 2)].PosY = self.TableauDames[pionToMove].PosY
-
-        #        #On élimine le pion situé au centre
-
-        #        self.TableauDames[pionToMove + (numberChange)].Status = "Null"
-        #        self.TableauDames[pionToMove + (numberChange)].Couleur = "Null"
-
-        #        if self.TableauDames[pionToMove + (numberChange)].Equipe == "1":
-        #            self.TableauJoueurs[0].nbrPions -= 1
-        #        else:
-        #            self.TableauJoueurs[1].nbrPions -= 1
-
-        #        self.TableauDames[pionToMove + (numberChange)].Equipe = "0"
-
-        #        #On déplace la case vide sur la case de départ
-
-        #        self.TableauDames[pionToMove].Status = "Null"
-        #        self.TableauDames[pionToMove].Couleur = "Null"
-        #        self.TableauDames[pionToMove].Equipe = "0"
-
-        #        self.TableauDames[pionToMove].PosX = PosX_PionOriginal
-        #        self.TableauDames[pionToMove].PosY = PosY_PionOriginal
-                
-        #        isMove = True
-        #        CaseFinale = pionToMove + (numberChange * 2)
-
-        #        print("DEBUG : New pos :", pionToMove + (numberChange * 2))
-        #        print("Pion pris !")
-                
-        #    else: #Si un emplacement est indisponible on ne peut pas prendre le pion
-        #        print("Impossible de prendre le pion !")
-        #else:
-        #    print("Déplacement impossible !")
-        #    return
-        
         #On regarde si on peut transformer le pion en dame
 
         if isMove == False:
