@@ -1,9 +1,11 @@
 import time
 import random
+import wave
 from tkinter import ttk as tkk
 from threading import Thread
 from tkinter import messagebox
 from tkinter import *
+from copy import deepcopy
 
 ##Variables de l'interface graphique et de jeu
 
@@ -25,10 +27,12 @@ Couleur_DameNoirCouleur = "red"
 Couleur_PionPreview = "yellow"
 
 priseMultiple = False
+hasGameFinished = False
 
 Rules_PriseMultipleEnable = True
 Rules_DamesEnable = True
 Rules_PriseObligatoireEnable = True
+Rules_Timer = True
 
 IA_Version = 1
 
@@ -143,29 +147,14 @@ class Options(): #Classe représentant le menu des options
     
     def __init__(self, master): #Initialisation de l'interface et de la classe
 
-        global Rules_DamesEnable, Rules_PriseMultipleEnable, Rules_PriseObligatoireEnable
+        global Rules_DamesEnable, Rules_PriseMultipleEnable, Rules_PriseObligatoireEnable, Rules_Timer
 
         self.master = master
         self.Frame = Frame(master)
         self.style = ttk.Style()
 
         self.IaButton = IntVar()
-        
-        if Rules_DamesEnable:
-            self.ChkDameEnable = 1
-        else:
-            self.ChkDameEnable = 0
-
-        if Rules_PriseMultipleEnable:
-            self.ChkPriseMultipleEnable = 1
-        else:
-            self.ChkPriseMultipleEnable = 0
-
-        if Rules_PriseObligatoireEnable:
-            self.ChkPriseObligatoireEnable = 1
-        else:
-            self.ChkPriseObligatoireEnable = 0
-
+       
         #Liste des différentes couleurs de tkinter
         self.Colors = ['snow', 'ghost white', 'white smoke', 'gainsboro', 'floral white', 'old lace',
           'linen', 'antique white', 'papaya whip', 'blanched almond', 'bisque', 'peach puff',
@@ -244,8 +233,30 @@ class Options(): #Classe représentant le menu des options
           'gray84', 'gray85', 'gray86', 'gray87', 'gray88', 'gray89', 'gray90', 'gray91', 'gray92',
           'gray93', 'gray94', 'gray95', 'gray97', 'gray98', 'gray99']
 
+        self.setChkButton()
         self.Draw_Interface()
-        
+       
+    def setChkButton(self):
+        if Rules_DamesEnable:
+            self.ChkDameEnable = 1
+        else:
+            self.ChkDameEnable = 0
+
+        if Rules_PriseMultipleEnable:
+            self.ChkPriseMultipleEnable = 1
+        else:
+            self.ChkPriseMultipleEnable = 0
+
+        if Rules_PriseObligatoireEnable:
+            self.ChkPriseObligatoireEnable = 1
+        else:
+            self.ChkPriseObligatoireEnable = 0
+
+        if Rules_Timer:
+            self.ChkTimerEnable = 1
+        else:
+            self.ChkTimerEnable = 0
+
     def Draw_Interface(self): #Fonction dessinant l'interface
 
         print("Drawing options interface...")
@@ -422,7 +433,7 @@ class Options(): #Classe représentant le menu des options
         self.CheckButton_PriseMultiple.configure(text="Prise multiple")
 
         self.CheckButton_PriseObligatoire = Checkbutton(self.LabelFrame_Regles, command = self.CheckButtonPriseObligatoire_Tick)
-        self.CheckButton_PriseObligatoire.place(relx=0.08, rely=0.32, relheight=0.14, relwidth=0.47)
+        self.CheckButton_PriseObligatoire.place(relx=0.08, rely=0.32, relheight=0.14, relwidth=0.45)
         self.CheckButton_PriseObligatoire.configure(activebackground="#d9d9d9")
         self.CheckButton_PriseObligatoire.configure(activeforeground="#000000")
         self.CheckButton_PriseObligatoire.configure(background="#d9d9d9")
@@ -432,6 +443,19 @@ class Options(): #Classe représentant le menu des options
         self.CheckButton_PriseObligatoire.configure(highlightcolor="black")
         self.CheckButton_PriseObligatoire.configure(justify=LEFT)
         self.CheckButton_PriseObligatoire.configure(text="Prise obligatoire")
+
+        self.CheckButton_Timer = Checkbutton(self.LabelFrame_Regles, command = self.CheckButtonTimer_Tick)
+        self.CheckButton_Timer.place(relx=0.53, rely=0.32, relheight=0.14, relwidth=0.47)
+        self.CheckButton_Timer.configure(activebackground="#d9d9d9")
+        self.CheckButton_Timer.configure(activeforeground="#000000")
+        self.CheckButton_Timer.configure(background="#d9d9d9")
+        self.CheckButton_Timer.configure(disabledforeground="#a3a3a3")
+        self.CheckButton_Timer.configure(foreground="#000000")
+        self.CheckButton_Timer.configure(highlightbackground="#d9d9d9")
+        self.CheckButton_Timer.configure(highlightcolor="black")
+        self.CheckButton_Timer.configure(justify=LEFT)
+        self.CheckButton_Timer.configure(text="Timer")
+
 
         #Configuration des principaux boutons
         self.Button_Return = tkk.Button(self.Frame, command = self.Open_MainMenuWindow)
@@ -447,7 +471,7 @@ class Options(): #Classe représentant le menu des options
         self.setDefaultColor()
         self.setIaButton()
         self.setRulesButton()
-
+    
     def setDefaultColor(self): #Fonction mettant les couleurs par défaut aux listes déroulantes
 
         global Couleur_DameBlancCouleur, Couleur_DameNoirCouleur, Couleur_DamierNoir, Couleur_PionBlanc, Couleur_PionNoir, Couleur_PionPreview
@@ -488,9 +512,14 @@ class Options(): #Classe représentant le menu des options
         else:
             self.CheckButton_PriseObligatoire.deselect()
 
+        if Rules_Timer:
+            self.CheckButton_Timer.select()
+        else:
+            self.CheckButton_Timer.deselect()
+    
     def Save(self): #Fonction sauvegardant les couleurs choisies
 
-        global Couleur_DameBlancCouleur, Couleur_DameNoirCouleur, Couleur_DamierNoir, Couleur_PionBlanc, Couleur_PionNoir, Couleur_PionPreview, IA_Version, Rules_DamesEnable, Rules_PriseMultipleEnable, Rules_PriseObligatoireEnable
+        global Couleur_DameBlancCouleur, Couleur_DameNoirCouleur, Couleur_DamierNoir, Couleur_PionBlanc, Couleur_PionNoir, Couleur_PionPreview, IA_Version, Rules_DamesEnable, Rules_PriseMultipleEnable, Rules_PriseObligatoireEnable, Rules_Timer
 
         #Sauvegarde des couleurs
         Couleur_DameBlancCouleur = self.ComboBox_DameBlanc.get()
@@ -523,6 +552,11 @@ class Options(): #Classe représentant le menu des options
         else:
             Rules_PriseObligatoireEnable = False
 
+        if self.ChkTimerEnable == 1:
+            Rules_Timer = True
+        else:
+            Rules_Timer = False
+
         self.Open_MainMenuWindow()
 
     def Random(self): #Fonction choisissant des couleurs aléatoires
@@ -551,6 +585,12 @@ class Options(): #Classe représentant le menu des options
             self.ChkPriseMultipleEnable = 0
         else:
             self.ChkPriseMultipleEnable = 1
+
+    def CheckButtonTimer_Tick(self):
+        if self.ChkTimerEnable == 1:
+            self.ChkTimerEnable = 0
+        else:
+            self.ChkTimerEnable = 1
 
     def Open_MainMenuWindow(self): #Fonction ouvrant le menu principal
 
@@ -800,13 +840,16 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
     def Close_Window(self): #Fonction permettant de fermer la fenêtre
         self.master.destroy()
 
-    def Update_Timer(self): #Fonction mettant à jour le timer de jeu
-        global timeLeft, Label_Timer
-        if timeLeft <= 0:
-            self.Skip_Turn()
-        timeLeft -= 1000
-        Label_Timer.config(text = "Temps restant : {}.{}".format(self.ConvertTime(timeLeft, False), self.ConvertTime(timeLeft, True)))
-        Label_Timer.after(1000, self.Update_Timer)
+    def Update_Timer(self): #Fonction mettant à jour le timer de jeu et l'interface si le jeu est fini
+        global timeLeft, Label_Timer, hasGameFinished, Root, Rules_Timer
+
+        if hasGameFinished == False and Rules_Timer == True:
+            if timeLeft <= 0:
+                self.Skip_Turn()
+            timeLeft -= 1000
+            Label_Timer.config(text = "Temps restant : {}.{}".format(self.ConvertTime(timeLeft, False), self.ConvertTime(timeLeft, True)))
+
+        Root.after(1000, self.Update_Timer)
     
     def ConvertTime(self, timeLeft, toSeconds):
         if toSeconds == True:
@@ -868,7 +911,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
 
     def StartGame(self, nombreJoueurs): #Fonction se lançant au début de la partie
 
-        global Rules_DamesEnable, Rules_PriseMultipleEnable, Rules_PriseObligatoireEnable
+        global Rules_DamesEnable, Rules_PriseMultipleEnable, Rules_PriseObligatoireEnable, Button_SkipTour, hasGameFinished, timeLeft
 
         print("Démarrage / Redémarrage du jeu")
 
@@ -878,7 +921,9 @@ class GameEngine(): #Classe représentant le moteur du jeu
         print("Dames : ", Rules_DamesEnable)
 
         self.teamToPlay = "Blanc" #On force à jouer les blancs en cas de redémarrage
-        
+        Button_SkipTour.configure(state = ACTIVE)
+        hasGameFinished = False
+
         self.canvas.delete() #On efface tout
 
         #On génère par défaut les pions et les joueurs
@@ -905,9 +950,6 @@ class GameEngine(): #Classe représentant le moteur du jeu
         #Anti-Lag / On supprime le maximum pour redéssiner ensuite
         self.delete("caseDamier1")
         self.delete("caseDamier2")
-        for i in range(len(self.listePionGraphique)):
-            self.canvas.delete(self.listePionGraphique[i])
-        self.listePionGraphique = []
         self.canvas.delete(ALL)
 
         #On réaffiche le damier et les pions à leurs nouvelle position
@@ -946,14 +988,18 @@ class GameEngine(): #Classe représentant le moteur du jeu
 
     def Tour(self, newTurn, isSkip, playIa): #Fonction s'executant à la fin de chaque tour
         
-        global timeLeft
+        global timeLeft, hasGameFinished, Button_SkipTour
 
         self.hasAlreadyCheckedTake = False
 
-        if self.TableauJoueurs[0].nbrPions == 0:
-            messagebox.showinfo("Gagné !!!", "J2 a gagné !")
-        elif self.TableauJoueurs[1].nbrPions == 0:
-            messagebox.showinfo("Gagné !!!", "J1 a gagné !")
+        if self.TableauJoueurs[0].nbrPions == 0 or self.TableauJoueurs[1].nbrPions == 0:
+            hasGameFinished = True
+            Button_SkipTour.configure(state = DISABLED)
+            if self.TableauJoueurs[0].nbrPions == 0:
+                messagebox.showinfo("Gagné !!!", "J2 a gagné !")
+            elif self.TableauJoueurs[1].nbrPions == 0:
+                messagebox.showinfo("Gagné !!!", "J1 a gagné !")
+
 
         self.isPionSelect = False
         self.pionSelect = 0
@@ -1059,7 +1105,12 @@ class GameEngine(): #Classe représentant le moteur du jeu
         else:
             print("Direction inconnue !")
             return
-        
+
+        self.PlaySound("Data/Sounds/Move.wav")
+
+        self.canvas.focus()
+        self.canvas.move(self.canvas.find_closest(self.TableauPions[PionSelect].PosX, self.TableauPions[PionSelect].PosY), self.TableauPions[CaseFinale].PosX - self.TableauPions[PionSelect].PosX, self.TableauPions[CaseFinale].PosY - self.TableauPions[PionSelect].PosY)
+
         #Déplacement du pion
 
         TempV = self.TableauPions[CaseFinale]
@@ -1161,6 +1212,8 @@ class GameEngine(): #Classe représentant le moteur du jeu
         cercleX = -25
         cercleY = 25    
 
+        self.listePionGraphique = []
+
         while i < len(self.TableauPions): #Selon le status de chaque pion dans le tableau on l'affiche graphiquement sur le damier           
             x = 0
             while x < 10: #Pour chaque case d'une ligne
@@ -1254,27 +1307,26 @@ class GameEngine(): #Classe représentant le moteur du jeu
                         self.RectanglePriseObligatoire.append(self.canvas.create_rectangle(self.roundint(self.TableauPions[i].PosX, 50), self.roundint(self.TableauPions[i].PosY, 50), self.roundint(self.TableauPions[i].PosX, 50) + 50, self.roundint(self.TableauPions[i].PosY, 50) + 50 , outline = "red", width = 3, tags = "rectanglePionObligatoire"))           
                     return
         
-        if self.priseMultiple == False or self.priseMultiple == True:
 
-            self.pionSelect = 0
+        self.pionSelect = 0
 
-            print(caseIdClicked)
+        print(caseIdClicked)
 
-            if self.TableauPions[caseIdClicked].Couleur == self.teamToPlay:
-                self.pionSelect = caseIdClicked
-            else:
-                self.pionSelect = 102
-                self.isPionSelect = False
+        if self.TableauPions[caseIdClicked].Couleur == self.teamToPlay:
+            self.pionSelect = caseIdClicked
+        else:
+            self.pionSelect = 102
+            self.isPionSelect = False
         
-            if self.pionSelect < 101 and self.TableauPions[caseIdClicked].Status != "Null": 
+        if self.pionSelect < 101 and self.TableauPions[caseIdClicked].Status != "Null": 
          
-                if (self.priseMultiple == True and self.CasePriseMultiple == self.pionSelect) or self.priseMultiple == False:
-                    self.caseIdPionSelect = self.pionSelect
-                    self.isPionSelect = True
+            if (self.priseMultiple == True and self.CasePriseMultiple == self.pionSelect) or self.priseMultiple == False:
+                self.caseIdPionSelect = self.pionSelect
+                self.isPionSelect = True
             
-                    self.canvas.create_rectangle(self.roundint(PosX, 50), self.roundint(PosY, 50), self.roundint(PosX, 50) + 50, self.roundint(PosY, 50) + 50 , outline = "yellow", width = 3, tags = "rectangleSelectPion")
+                self.canvas.create_rectangle(self.roundint(PosX, 50), self.roundint(PosY, 50), self.roundint(PosX, 50) + 50, self.roundint(PosY, 50) + 50 , outline = "yellow", width = 3, tags = "rectangleSelectPion")
             
-                    self.showPlaceToGo(self.pionSelect, True)
+                self.showPlaceToGo(self.pionSelect, True)
 
     def checkIfPionCanBeTake(self):
         print("Check pion obligatoire..")
@@ -1421,7 +1473,41 @@ class GameEngine(): #Classe représentant le moteur du jeu
             return True
         else:
             return False
-         
+    
+    def PlaySound(self, FileName):
+        print("Playing sound !")
+        
+        file = FileName
+
+        if sys.platform.startswith('win'): #Si on est sous windows on lance le son
+
+            from winsound import PlaySound, SND_FILENAME, SND_ASYNC
+            PlaySound(file, SND_FILENAME|SND_ASYNC)
+
+        elif sys.platform.find('linux')>-1: #Sinon on lance avec la librairie linux
+
+            from wave import open as waveOpen
+            from ossaudiodev import open as ossOpen
+
+            s = waveOpen('tada.wav','rb')
+            (nc,sw,fr,nf,comptype, compname) = s.getparams( )
+            dsp = ossOpen('/dev/dsp','w')
+            try:
+                print("..")
+                from ossaudiodev import AFMT_S16_NE
+
+            except ImportError:
+                if byteorder == "little":
+                    AFMT_S16_NE = ossaudiodev.AFMT_S16_LE
+                else:
+                    AFMT_S16_NE = ossaudiodev.AFMT_S16_BE
+
+            dsp.setparameters(AFMT_S16_NE, nc, fr)
+            data = s.readframes(nf)
+            s.close()
+            dsp.write(data)
+            dsp.close()  
+
 # --- Fonctions Graphiques et utilitaires ---
 
     def roundint(self, value, base=5): #Fonction permettant d'arrondir
@@ -1431,7 +1517,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
         self.canvas.delete(self.canvas.find_withtag(MonTag))
 
     def cercle(self, x, y, r, coul, tagsC = "cercle"): #Fonction permettant de tracer un cercle
-        self.canvas.create_oval(x-r, y-r, x+r, y+r, fill=coul, tags="cercleChoixPos")
+        return self.canvas.create_oval(x-r, y-r, x+r, y+r, fill=coul, tags="cercleChoixPos")
     
     def Rectangle(self, x, y, coul): #Fonction permettant de tracer un rectangle
         self.canvas.create_rectangle(x + 20, x+20, y + 20, y+20, outline=coul)
