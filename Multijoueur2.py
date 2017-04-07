@@ -3,6 +3,7 @@ import random
 import socket
 import select
 import pickle
+import queue
 import tkinter.ttk as tkk
 from threading import Thread, RLock
 from tkinter import messagebox
@@ -38,6 +39,7 @@ switchTurn = False
 verrou = RLock()
 TableauDameGlobal = []
 modifTableauDame = False
+QueueN = queue.Queue()
 
 ## -- Toutes les différentes GUI --
 
@@ -479,6 +481,7 @@ class Network():
                 print("Send message to client..")
                 self.Serveur_SendMessage(pickle.dumps(TableauDameGlobal))
                 switchTurn = False
+                
             time.sleep(0.1)
 
     def Serveur_SendMessage(self, messageToSend):
@@ -492,7 +495,7 @@ class Network():
 
     def Client_Init(self):
 
-        global TableauDameGlobal, switchTurn, isConnected, verrou
+        global TableauDameGlobal, switchTurn, isConnected, verrou, Root
 
         self.connexion_avec_serveur = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connexion_avec_serveur.connect((self.Ip, self.Port))
@@ -502,12 +505,15 @@ class Network():
 
         while True:
             print("Boucle client...")
+            self.connexion_avec_serveur.setblocking(0)
             if switchTurn:
                 print("Send message client...")
                 self.Client_SendMessage(pickle.dumps(TableauDameGlobal))
                 switchTurn = False
+
+                
                 print("Start to wait for message...")
-                TableauDameGlobal = self.Client_WaitMessage()
+                TableauDameGlobal = Root.after(1000, self.Client_WaitMessage)
 
             print("Sleep...")
             time.sleep(0.1)
@@ -520,14 +526,16 @@ class Network():
 
         print("Waiting for message...")
         self.msg_recu = ""
-        while self.msg_recu == "":
-            self.msg_recu = self.connexion_avec_serveur.recv(10000)
-            if self.msg_recu != "" and len(self.msg_a_envoyer) < 100:
-                print("Message reçu")
-                return self.msg_recu
-            else:
-                self.msg_recu = ""
-            time.sleep(0.1)
+        try:
+            while self.msg_recu == "":
+
+                self.msg_recu = pickle.loads(self.connexion_avec_serveur.recv(10000))
+                if self.msg_recu != "" and len(self.msg_a_envoyer) < 100:
+                    print("Message reçu")
+                    return self.msg_recu
+                else:
+                    self.msg_recu = ""
+                time.sleep(0.1)
 
     def Client_SendMessage(self, messageToSend):
         print("Sending message...")
@@ -539,6 +547,10 @@ class Network():
     def Client_CloseConnection(self):
         print("Closing connection to the server !")
         self.connexion_avec_serveur.close()
+
+    def on_main_thread(func):
+        global QueueN
+        q.put(func)
 
 class Jeu(): #Classe représentant l'interface du jeu de dames
     
@@ -735,6 +747,7 @@ class GameEngine():
         for i in range(len(self.listePionGraphique)):
             self.canvas.delete(self.listePionGraphique[i])
         self.listePionGraphique = []
+        self.canvas.delete(ALL)
 
         self.showDamier()
         self.showTerrainFromPionPlace()
@@ -772,17 +785,12 @@ class GameEngine():
                     switchTurn = ""
                 else:
                     switchTurn = True
+            
+            self.check_queue()
 
             self.Refresh(False)
 
-            WaitThread = Thread(target = self.WaitForResponse)
-            WaitThread.start()
-
-            WaitThread.join()
-  
-            self.TableauDames = TableauDameGlobal  
-                
-            self.Refresh(False)
+               
                 
             if self.isFirstTurn == True and isHost == True:
                 newTurn = False   
@@ -803,7 +811,18 @@ class GameEngine():
         self.isFirstTurn = False
                        
         self.UpdateGui()
-           
+ 
+    def check_queue():
+        global QueueN, Root
+        while True:
+            try:
+                task = QueueN.get(block=False)
+            except Empty:
+                break
+            else:
+                 Root.after_idle(task)
+                 Root.after(100, check_queue)  
+                                     
     def WaitForResponse(self):
         global modifTableauDame, verrou
 

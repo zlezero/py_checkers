@@ -1,4 +1,4 @@
-import time
+﻿import time
 import random
 from tkinter import ttk as tkk
 from threading import Thread
@@ -865,6 +865,8 @@ class GameEngine(): #Classe représentant le moteur du jeu
       
         self.priseMultiple = priseMultiple #On regarde si on est dans une situation de prise multiple
         self.CasePriseMultiple = 0 #Case finale pour la prise multiple
+
+    #Fonctions réseau
 
     def StartGame(self, nombreJoueurs): #Fonction se lançant au début de la partie
 
