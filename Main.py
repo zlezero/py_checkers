@@ -1,6 +1,7 @@
 import time
 import random
 import wave
+import os
 from tkinter import ttk as tkk
 from threading import Thread
 from tkinter import messagebox
@@ -33,6 +34,8 @@ Rules_PriseMultipleEnable = True
 Rules_DamesEnable = True
 Rules_PriseObligatoireEnable = True
 Rules_Timer = True
+
+Use_Texture = False
 
 IA_Version = 1
 
@@ -104,7 +107,7 @@ class MainMenu(): #Classe représentant le menu principal
         self.quitButton.configure(text="Quitter")
 
     def ShowRules(self):
-        messagebox.showinfo("Règles", "Un joueur doit éliminer tous les pions adverses.")
+        messagebox.showinfo("Règles", "Un joueur doit éliminer tous les pions adverses. \n Si un de ses pions arrivent de l'autre coté du damier il devient une dame.", parent = self.master)
 
     def Hide_Window(self): #Fonction permettant de cacher la fenêtre
         self.master.withdraw()
@@ -694,9 +697,9 @@ class Multijoueur():
 
     def Launch_Multiplayer(self):
         if self.Entry_Ip.get() == "" and self.isHost == False:
-            messagebox.showerror("Erreur", "Vous devez indiquer une adresse IP !")
+            messagebox.showerror("Erreur", "Vous devez indiquer une adresse IP !", parent = self.master)
         elif self.Entry_Pseudo.get() == "":
-            messagebox.showerror("Erreur", "Vous devez entrer un pseudo !")
+            messagebox.showerror("Erreur", "Vous devez entrer un pseudo !", parent = self.master)
         else:
             print("Lancement du multijoueur...")
             self.Pseudo = self.Entry_Pseudo.get()
@@ -902,6 +905,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
         self.ListeCaseChoixPossible = [] #Liste contenant les numéros des cases possibles
         self.listePionCanTake = [] #Liste des pions qui peuvent en prendre d'autre
         self.listePionWhoCanTake = []  #Pareil
+        self.ListePionsPossibleToMove = []
 
         self.hasAlreadyCheckedTake = False #Si on a déjà regardé la prise obligatoire
         self.caseIdPionSelect = 0 #Id de la case du pion sélectionné
@@ -973,37 +977,85 @@ class GameEngine(): #Classe représentant le moteur du jeu
     def IA_1(self):
         print("IA 1 !")
         pionWhoCanMove = []
-        for i in range(len(self.TableauPions)):
-            self.showPlaceToGo(i, False)
-            if self.ListeCaseChoixPossible != []:
-                pionWhoCanMove.append(i)
+        
+        
         pionToMove = random.choice(pionWhoCanMove)
-        self.movePion(pionToMove, "DiagGaucheBas", pionToMove + 11)
-        self.Tour(True, False, False)
+
+
+        self.movePion(pionToMove, "DiagGaucheBas", pionToMove + 11, False)
             
+        
+    #Fonctions utilitaires pour l'IA 1
+
+    def maxMinBoard(self, currentDepth, bestMove):
+        best_move = bestMove
+        best_board = None
+
+        if best_move == float("-inf"):
+            moves = ""
 
 
+    def GetMoves(self, team):
+        if team == "Blanc" or team == "Noir":
+            pionWhoCanMove = []
+            for i in range(len(self.TableauPions)):
+                if self.TableauPions[i].Couleur == team:
+                    self.showPlaceToGo(i, False)
+            return self.ListePionsPossibleToMove
+
+
+    def isWin(self):
+        if self.TableauJoueurs[0].nbrPions == 0 or self.TableauJoueurs[1].nbrPions == 0:
+            return True
+        else:
+            return False
+            
     def IA_2(self):
         print("IA 2 !")
+
+        listeInterdit = [0, 2, 4, 6, 8, 11, 13, 15, 17, 19, 20, 22, 24, 26, 28, 31, 33, 35, 37, 39, 40, 42, 44, 46, 48, 51, 53, 55, 57, 59, 60, 62, 64, 66, 68, 71, 73, 75, 77, 79, 80, 82, 84, 86, 88, 91, 93, 95, 97, 99] #Cases ou les pions ne pourront jamais aller
+
+        self.selectPion_OnClick(0, 0) #On refresh le tableau de prise obligatoire
+
+        pionCanMove = self.GetMoves("Noir")
+
+        print(pionCanMove)
+
+        pionSelect = random.choice(pionCanMove) 
+
+        self.showPlaceToGo(pionSelect, True)
+
+        caseSelect = random.choice(self.ListeCaseChoixPossible)
+
+        while self.TableauPions[pionSelect].Couleur != "Noir" and caseSelect not in listeInterdit:
+            pionSelect = random.choice(pionCanMove) 
+
+        self.movePion(pionSelect, "DiagGaucheBas", caseSelect, False)
+
+        self.Tour(True, False, False)
 
     def Tour(self, newTurn, isSkip, playIa): #Fonction s'executant à la fin de chaque tour
         
         global timeLeft, hasGameFinished, Button_SkipTour
 
         self.hasAlreadyCheckedTake = False
+        self.ListePionsPossibleToMove = []
 
         if self.TableauJoueurs[0].nbrPions == 0 or self.TableauJoueurs[1].nbrPions == 0:
             hasGameFinished = True
             Button_SkipTour.configure(state = DISABLED)
             if self.TableauJoueurs[0].nbrPions == 0:
-                messagebox.showinfo("Gagné !!!", "J2 a gagné !")
+                messagebox.showinfo("Gagné !!!", "J2 a gagné !", parent = self.master)
             elif self.TableauJoueurs[1].nbrPions == 0:
-                messagebox.showinfo("Gagné !!!", "J1 a gagné !")
+                messagebox.showinfo("Gagné !!!", "J1 a gagné !", parent = self.master)
 
 
         self.isPionSelect = False
         self.pionSelect = 0
         self.deleteMoveGraphObject()
+
+        if (self.TableauJoueurs[0].isAi == True or self.TableauJoueurs[1].isAi == True) and playIa == True:
+            self.IA()
 
         if newTurn == True:
 
@@ -1011,9 +1063,6 @@ class GameEngine(): #Classe représentant le moteur du jeu
                 self.teamToPlay = "Noir"
             else:
                 self.teamToPlay = "Blanc"
-
-        if (self.TableauJoueurs[0].isAi == True or self.TableauJoueurs[1].isAi == True) and playIa == True:
-            self.IA()
 
         timeLeft = 180000                   
         self.UpdateGui()
@@ -1063,7 +1112,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
             self.TableauJoueurs[1] = Player("Joueur 2", 2, 20, False)
     
     
-    def movePion(self, PionSelect, Direction, CaseFinale): #Fonction gérant le déplacement des pions
+    def movePion(self, PionSelect, Direction, CaseFinale, switchTurn): #Fonction gérant le déplacement des pions
 
         global priseMultiple, Rules_PriseMultipleEnable
 
@@ -1190,7 +1239,10 @@ class GameEngine(): #Classe représentant le moteur du jeu
         self.priseMultiple = False
         priseMultiple = self.priseMultiple
 
-        self.Refresh(True)
+        if switchTurn:
+            self.Refresh(True)
+        else:
+            self.Refresh(False)
    
     def CheckTransformatonDame(self, PionSelect): #Fonction qui regarde si les pions doivent se transformer en dames
 
@@ -1201,11 +1253,10 @@ class GameEngine(): #Classe représentant le moteur du jeu
             if self.TableauPions[pionSelect].Status == "Pion":
                 if (pionSelect >= 90 and self.TableauPions[pionSelect].Equipe == "1") or (pionSelect <= 9 and self.TableauPions[pionSelect].Equipe == "2"):
                     self.TableauPions[pionSelect].Status = "Dame"
-                    self.listeDameCantMove.append(pionSelect)
     
     def showTerrainFromPionPlace(self): #Fonction qui affiche les pions en fonction du tableau
 
-        global Couleur_PionBlanc, Couleur_PionNoir, Couleur_DameBlancCouleur, Couleur_DameNoirCouleur, Couleur_DamierNoir
+        global Couleur_PionBlanc, Couleur_PionNoir, Couleur_DameBlancCouleur, Couleur_DameNoirCouleur, Couleur_DamierNoir, Use_Texture
 
         i = 0 
         x = 0
@@ -1220,15 +1271,27 @@ class GameEngine(): #Classe représentant le moteur du jeu
                 cercleX += 50
                 if self.TableauPions[i].Status != "Null":
                     if self.TableauPions[i].Couleur == "Blanc" and self.TableauPions[i].Status == "Dame":
-                        self.listePionGraphique.append(self.cercle(cercleX, cercleY, 25, Couleur_PionBlanc))
-                        self.listePionGraphique.append(self.cercle(cercleX, cercleY, 20, Couleur_DameBlancCouleur))
+                        if Use_Texture == False:
+                            self.listePionGraphique.append(self.cercle(cercleX, cercleY, 25, Couleur_PionBlanc))
+                            self.listePionGraphique.append(self.cercle(cercleX, cercleY, 20, Couleur_DameBlancCouleur))
+                        else:
+                            self.listePionGraphique.append(self.Create_Image(cercleX, cercleY, image = os.path.dirname(os.path.realpath(__file__)) + "\Data\Graphics\Pion.png"))
                     elif self.TableauPions[i].Couleur == "Noir" and self.TableauPions[i].Status == "Dame":
-                        self.listePionGraphique.append(self.cercle(cercleX, cercleY, 25, Couleur_PionNoir))
-                        self.listePionGraphique.append(self.cercle(cercleX, cercleY, 20, Couleur_DameNoirCouleur))
+                        if Use_Texture == False:
+                            self.listePionGraphique.append(self.cercle(cercleX, cercleY, 25, Couleur_PionNoir))
+                            self.listePionGraphique.append(self.cercle(cercleX, cercleY, 20, Couleur_DameNoirCouleur))
+                        else:
+                            self.listePionGraphique.append(self.Create_Image(cercleX, cercleY, image = os.path.dirname(os.path.realpath(__file__)) + "\Data\Graphics\Pion.png"))
                     elif self.TableauPions[i].Couleur == "Blanc":
-                        self.listePionGraphique.append(self.cercle(cercleX, cercleY, 20, Couleur_PionBlanc))
+                        if Use_Texture == False:
+                            self.listePionGraphique.append(self.cercle(cercleX, cercleY, 20, Couleur_PionBlanc))
+                        else:
+                            self.listePionGraphique.append(self.Create_Image(cercleX, cercleY, image = "\Pion.gif"))
                     elif self.TableauPions[i].Couleur == "Noir":
-                        self.listePionGraphique.append(self.cercle(cercleX, cercleY, 20, Couleur_PionNoir))
+                        if Use_Texture == False:
+                            self.listePionGraphique.append(self.cercle(cercleX, cercleY, 20, Couleur_PionNoir))
+                        else:
+                            self.listePionGraphique.append(self.Create_Image(cercleX, cercleY, image = "\Pion.gif"))
                 i += 1
                 x += 1
             cercleX = -25
@@ -1280,14 +1343,14 @@ class GameEngine(): #Classe représentant le moteur du jeu
 
             if self.TableauPions[self.caseIdPionSelect].PosY < PosY :
                 if self.TableauPions[self.caseIdPionSelect].PosX < PosX and caseIdClicked in self.ListeCaseChoixPossible:
-                    self.movePion(self.pionSelect, "DiagDroiteBas", caseIdClicked)
+                    self.movePion(self.pionSelect, "DiagDroiteBas", caseIdClicked, True)
                 elif self.TableauPions[self.caseIdPionSelect].PosX > PosX and caseIdClicked in self.ListeCaseChoixPossible:
-                    self.movePion(self.pionSelect, "DiagGaucheBas", caseIdClicked)
+                    self.movePion(self.pionSelect, "DiagGaucheBas", caseIdClicked, True)
             else:
                 if self.TableauPions[self.caseIdPionSelect].PosX < PosX and caseIdClicked in self.ListeCaseChoixPossible:
-                    self.movePion(self.pionSelect, "DiagDroiteHaut", caseIdClicked)
+                    self.movePion(self.pionSelect, "DiagDroiteHaut", caseIdClicked, True)
                 elif self.TableauPions[self.caseIdPionSelect].PosX > PosX and caseIdClicked in self.ListeCaseChoixPossible:
-                    self.movePion(self.pionSelect, "DiagGaucheHaut", caseIdClicked) 
+                    self.movePion(self.pionSelect, "DiagGaucheHaut", caseIdClicked, True) 
 
             if self.priseMultiple == False:
                 self.isPionSelect = False
@@ -1399,7 +1462,6 @@ class GameEngine(): #Classe représentant le moteur du jeu
             listeCheckDynamic.append(-9)
             listeCheckDynamic.append(-11)
 
-
         #Système de preview de déplacement des dames
 
         if self.TableauPions[pionSelect].Status == "Dame":
@@ -1452,6 +1514,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
                            if drawCircle:
                                 self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauPions[pionSelect + (i * 2)].PosX - 5, self.TableauPions[pionSelect + (i * 2)].PosY - 5, self.TableauPions[pionSelect + (i * 2)].PosX + 5, self.TableauPions[pionSelect + (i * 2)].PosY + 5, fill= Couleur_PionPreview))
                            self.ListeCaseChoixPossible.append(pionSelect + (i * 2))
+                           self.ListePionsPossibleToMove.append(pionSelect)
                            canTakePion = True
         
         if self.priseMultiple != True and canTakePion != True and self.TableauPions[pionSelect].Status == "Pion":
@@ -1461,14 +1524,13 @@ class GameEngine(): #Classe représentant le moteur du jeu
                        if drawCircle:
                             self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauPions[pionSelect + (i)].PosX - 5, self.TableauPions[pionSelect + (i)].PosY - 5,  self.TableauPions[pionSelect + (i)].PosX + 5, self.TableauPions[pionSelect + (i)].PosY + 5, fill= Couleur_PionPreview))
                        self.ListeCaseChoixPossible.append(pionSelect + (i))
+                       self.ListePionsPossibleToMove.append(pionSelect)
 
         if self.priseMultiple == True and self.ListeCaseChoixPossible != [] and canTakePion == True:
             return "PionCanBeTake"
         elif self.priseMultiple == True:
             return "NoPionCanBeTake"
-       
-        self.listeDameCantMove = [] 
-        
+               
         if canTakePion:
             return True
         else:
@@ -1521,6 +1583,10 @@ class GameEngine(): #Classe représentant le moteur du jeu
     
     def Rectangle(self, x, y, coul): #Fonction permettant de tracer un rectangle
         self.canvas.create_rectangle(x + 20, x+20, y + 20, y+20, outline=coul)
+
+    def Create_Image(self, x, y, image):
+        ImageU = PhotoImage(file = os.path.dirname(os.path.realpath(__file__)) + image)
+        return self.canvas.create_image(x, y, image = ImageU)
 
         
 ## -- Programme Principal --
