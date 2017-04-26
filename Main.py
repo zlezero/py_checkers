@@ -37,6 +37,9 @@ Rules_Timer = True
 
 Use_Texture = False
 
+White_Has_Skip_Turn = False
+Black_Has_Skip_Turn = False
+
 IA_Version = 1
 
 ## -- Toutes les différentes GUI --
@@ -107,7 +110,7 @@ class MainMenu(): #Classe représentant le menu principal
         self.quitButton.configure(text="Quitter")
 
     def ShowRules(self):
-        messagebox.showinfo("Règles", "Un joueur doit éliminer tous les pions adverses. \n Si un de ses pions arrivent de l'autre coté du damier il devient une dame.", parent = self.master)
+        messagebox.showinfo("Règles", "Un joueur doit éliminer tous les pions adverses. \n Si un de ses pions arrivent de l'autre coté du damier il se transforme en dame.", parent = self.master)
 
     def Hide_Window(self): #Fonction permettant de cacher la fenêtre
         self.master.withdraw()
@@ -835,10 +838,18 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
                 self.GEng.StartGame(2)
 
     def Skip_Turn(self): #Fonction permettant de sauter son tour en jeu
-        global priseMultiple
+        global priseMultiple, White_Has_Skip_Turn, Black_Has_Skip_Turn
+
         if priseMultiple == False:
-            print("Skipping turn !")
-            self.GEng.Tour(True, True, True)
+            if (self.GEng.teamToPlay == "Noir" and Black_Has_Skip_Turn != True) or (self.GEng.teamToPlay == "Blanc" and White_Has_Skip_Turn != True):
+                print("Skipping turn !")
+                
+                if self.GEng.teamToPlay == "Noir":
+                    Black_Has_Skip_Turn = True
+                elif self.GEng.teamToPlay == "Blanc":
+                    White_Has_Skip_Turn = True
+
+                self.GEng.Tour(True, True, True)
 
     def Close_Window(self): #Fonction permettant de fermer la fenêtre
         self.master.destroy()
@@ -912,6 +923,8 @@ class GameEngine(): #Classe représentant le moteur du jeu
       
         self.priseMultiple = priseMultiple #On regarde si on est dans une situation de prise multiple
         self.CasePriseMultiple = 0 #Case finale pour la prise multiple
+
+        self.NombreCoupsSansPrise = 0
 
     def StartGame(self, nombreJoueurs): #Fonction se lançant au début de la partie
 
@@ -1020,7 +1033,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
         pionCanMove = self.GetMoves("Noir")
 
         print(pionCanMove)
-
+        
         pionSelect = random.choice(pionCanMove) 
 
         self.showPlaceToGo(pionSelect, True)
@@ -1036,23 +1049,37 @@ class GameEngine(): #Classe représentant le moteur du jeu
 
     def Tour(self, newTurn, isSkip, playIa): #Fonction s'executant à la fin de chaque tour
         
-        global timeLeft, hasGameFinished, Button_SkipTour
+        global timeLeft, hasGameFinished, Button_SkipTour, White_Has_Skip_Turn, Black_Has_Skip_Turn
+
+        print("Turn function...")
 
         self.hasAlreadyCheckedTake = False
         self.ListePionsPossibleToMove = []
 
-        if self.TableauJoueurs[0].nbrPions == 0 or self.TableauJoueurs[1].nbrPions == 0:
+        isEquality = self.CheckEgalite()
+
+        if self.TableauJoueurs[0].nbrPions == 0 or self.TableauJoueurs[1].nbrPions == 0 or isEquality == True:
+
             hasGameFinished = True
+
             Button_SkipTour.configure(state = DISABLED)
+
             if self.TableauJoueurs[0].nbrPions == 0:
                 messagebox.showinfo("Gagné !!!", "J2 a gagné !", parent = self.master)
             elif self.TableauJoueurs[1].nbrPions == 0:
                 messagebox.showinfo("Gagné !!!", "J1 a gagné !", parent = self.master)
+            elif isEquality == True:
+                messagebox.showinfo("Egalité !", "Il y a égalité !", parent = self.master)
 
 
         self.isPionSelect = False
         self.pionSelect = 0
         self.deleteMoveGraphObject()
+
+        if self.teamToPlay == "Noir" and Black_Has_Skip_Turn == True and isSkip == False:
+            Black_Has_Skip_Turn = False
+        elif self.teamToPlay == "Blanc" and White_Has_Skip_Turn == True and isSkip == False:
+            White_Has_Skip_Turn = False
 
         if (self.TableauJoueurs[0].isAi == True or self.TableauJoueurs[1].isAi == True) and playIa == True:
             self.IA()
@@ -1064,9 +1091,40 @@ class GameEngine(): #Classe représentant le moteur du jeu
             else:
                 self.teamToPlay = "Blanc"
 
+        if (self.teamToPlay == "Noir" and Black_Has_Skip_Turn) or (self.teamToPlay == "Blanc" and White_Has_Skip_Turn):
+            Button_SkipTour.configure(state = DISABLED)
+        elif hasGameFinished == False:
+            Button_SkipTour.configure(state = ACTIVE)
+
+
         timeLeft = 180000                   
         self.UpdateGui()
             
+    def CheckEgalite(self):    
+
+
+        if self.isMove == True:
+            self.NombreCoupsSansPrise = 0
+        else:
+            self.NombreCoupsSansPrise += 1
+
+
+        if self.NombreCoupsSansPrise >= 25:
+            return True
+        
+        nbrDames_Blanches = 0
+        nbrDames_Noires = 0
+
+        for i in self.TableauPions:
+            if i.Status == "Dame" and i.Couleur == "Blanc":
+                nbrDames_Blanches += 1
+            elif i.Status == "Dame" and i.Couleur == "Noir":
+                nbrDames_Noires += 1
+
+        if (nbrDames_Blanches == 2 and nbrDames_Noires == 1 and self.TableauJoueurs[1].nbrPions == 2 and self.TableauJoueurs[0].nbrPions == 1) or (nbrDames_Blanches == 1 and nbrDames_Noires == 2 and self.TableauJoueurs[1].nbrPions == 1 and self.TableauJoueurs[0].nbrPions == 2) or (nbrDames_Blanches == 1 and nbrDames_Noires == 1 and self.TableauJoueurs[0].nbrPions == 1 and self.TableauJoueurs[1].nbrPions == 1):
+            return True
+
+        return False
 
     def GenerateTableauPion(self): #Fonction gérant la position initiale des pions
         
@@ -1114,12 +1172,12 @@ class GameEngine(): #Classe représentant le moteur du jeu
     
     def movePion(self, PionSelect, Direction, CaseFinale, switchTurn): #Fonction gérant le déplacement des pions
 
-        global priseMultiple, Rules_PriseMultipleEnable
+        global priseMultiple, Rules_PriseMultipleEnable, Button_SkipTour
 
         self.priseMultiple = False
         pionToMove = PionSelect
         CaseFinale = CaseFinale
-        isMove = False
+        self.isMove = False
         pionDirection = Direction
         numberChange = 0
         
@@ -1197,7 +1255,8 @@ class GameEngine(): #Classe représentant le moteur du jeu
                         self.TableauPions[caseActuelle].Couleur = "Null"
                         self.TableauPions[caseActuelle].Equipe = "0"                 
 
-                        isMove = True
+                        self.isMove = True
+
                         break
 
         elif self.TableauPions[CaseFinale].Status != "Null" and self.TableauPions[CaseFinale].Equipe != self.TableauPions[pionToMove + (numberChange)].Equipe:
@@ -1211,13 +1270,13 @@ class GameEngine(): #Classe représentant le moteur du jeu
               else:
                   self.TableauJoueurs[0].nbrPions -= 1
 
-              isMove = True
+              self.isMove = True
 
               CaseFinale = pionToMove + (numberChange * 2)
 
         #On regarde si on peut transformer le pion en dame
 
-        if isMove == False:
+        if self.isMove == False:
             self.CheckTransformatonDame(pionToMove + (numberChange))
         else:
 
@@ -1232,7 +1291,10 @@ class GameEngine(): #Classe représentant le moteur du jeu
 
                 if self.showPlaceToGo(CaseFinale, False) == "PionCanBeTake":
                     self.Refresh(False)
+                    Button_SkipTour.configure(state = DISABLED)
                     return
+                else:
+                    Button_SkipTour.configure(state = ACTIVE)
 
             self.CheckTransformatonDame(pionToMove + (numberChange * 2))
 
@@ -1372,24 +1434,22 @@ class GameEngine(): #Classe représentant le moteur du jeu
         
 
         self.pionSelect = 0
-
-        print(caseIdClicked)
-
-        if self.TableauPions[caseIdClicked].Couleur == self.teamToPlay:
-            self.pionSelect = caseIdClicked
-        else:
-            self.pionSelect = 102
-            self.isPionSelect = False
         
-        if self.pionSelect < 101 and self.TableauPions[caseIdClicked].Status != "Null": 
+        if self.TableauPions[caseIdClicked].Couleur == self.teamToPlay and self.TableauPions[caseIdClicked].Status != "Null": 
          
+            self.pionSelect = caseIdClicked
+
             if (self.priseMultiple == True and self.CasePriseMultiple == self.pionSelect) or self.priseMultiple == False:
+
                 self.caseIdPionSelect = self.pionSelect
+
                 self.isPionSelect = True
             
                 self.canvas.create_rectangle(self.roundint(PosX, 50), self.roundint(PosY, 50), self.roundint(PosX, 50) + 50, self.roundint(PosY, 50) + 50 , outline = "yellow", width = 3, tags = "rectangleSelectPion")
             
                 self.showPlaceToGo(self.pionSelect, True)
+        else:
+            self.isPionSelect = False
 
     def checkIfPionCanBeTake(self):
         print("Check pion obligatoire..")

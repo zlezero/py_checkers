@@ -1,4 +1,5 @@
 ﻿import time, random , wave, os, select, pickle, socket, queue, errno
+import urllib.request
 from tkinter import ttk as tkk
 from threading import Thread
 from tkinter import messagebox
@@ -24,7 +25,7 @@ Couleur_PionBlanc = "white"
 Couleur_PionNoir = "brown"
 Couleur_DamierNoir = "black"
 Couleur_DameBlancCouleur = "ivory"
-Couleur_DameNoirCouleur = "red"
+Couleur_DameNoirCouleur = "red2"
 Couleur_PionPreview = "yellow"
 
 priseMultiple = False
@@ -42,9 +43,11 @@ Black_Has_Skip_Turn = False
 
 IA_Version = 1
 
+Is_Windows = False
+
 #Variables Multijoueurs
 
-IsMultiplayer = True
+IsMultiplayer = False
 isConnected = False
 isHost = False
 
@@ -62,6 +65,13 @@ TableauPions_Global = None
 class MainMenu(): #Classe représentant le menu principal
     
     def __init__(self, master): #Initialisation de l'interface et de la classe
+
+        global Is_Windows
+
+        if sys.platform.startswith('win'):
+            Is_Windows = True
+        else:
+            Is_Windows = False
 
         self.master = master
         self.Frame = Frame(master)
@@ -646,6 +656,8 @@ class Multijoueur():
 
     def Draw_Interface(self):
 
+        global Is_Windows
+
         self.master.geometry("482x119+427+96")
         self.master.configure(background="#d9d9d9")
 
@@ -660,7 +672,9 @@ class Multijoueur():
         self.Entry_Ip = ttk.Entry(self.Labelframe_Config)
         self.Entry_Ip.place(relx=0.35, rely=0.14, relheight=0.20, relwidth=0.58)
         self.Entry_Ip.configure(width=146)
-        self.Entry_Ip.configure(cursor="ibeam")
+
+        if Is_Windows:
+            self.Entry_Ip.configure(cursor="ibeam")
 
         self.Label_Ip = ttk.Label(self.Labelframe_Config)
         self.Label_Ip.place(relx=0.04, rely=0.15, height=19, width=76)
@@ -686,7 +700,7 @@ class Multijoueur():
         self.Label_MyIp.configure(background="#d9d9d9")
         self.Label_MyIp.configure(foreground="#000000")
         self.Label_MyIp.configure(relief=FLAT)
-        self.Label_MyIp.configure(text="Mon adresse IP : 127.0.0.1")
+        self.Label_MyIp.configure(text="Mon adresse IP : " + self.get_locale_ip() + " (locale) / " + self.get_extern_ip() + " (externe)")
 
         self.Labelframe_ConfigPlayer = LabelFrame(self.master)
         self.Labelframe_ConfigPlayer.place(relx=0.56, rely=0.0, relheight=0.46, relwidth=0.41)
@@ -704,7 +718,9 @@ class Multijoueur():
 
         self.Entry_Pseudo = ttk.Entry(self.Labelframe_ConfigPlayer)
         self.Entry_Pseudo.place(relx=0.33, rely=0.18, relheight=0.55, relwidth=0.63)
-        self.Entry_Pseudo.configure(cursor="ibeam")
+
+        if Is_Windows:
+            self.Entry_Pseudo.configure(cursor="ibeam")
 
         self.Button_Launch = ttk.Button(self.master, command = self.Launch_Multiplayer)
         self.Button_Launch.place(relx=0.56, rely=0.5, height=25, width=196)
@@ -714,14 +730,38 @@ class Multijoueur():
         self.Button_Return.place(relx=0.56, rely=0.75, height=25, width=196)
         self.Button_Return.configure(text="Retourner au menu")
 
+    def get_locale_ip(self):
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            # doesn't even have to be reachable
+            s.connect(('8.8.8.8', 1))
+            IP = s.getsockname()[0]
+        except:
+            IP = '127.0.0.1'
+        finally:
+            s.close()
+        return IP
+
+    def get_extern_ip(self):
+
+        try:
+            external_ip = urllib.request.urlopen('http://ident.me').read().decode('utf8')
+        except:
+            external_ip = "Ip non disponible"
+        finally:
+            return external_ip
+
     def Launch_Multiplayer(self):
 
-        global Network_Class, isHost, Pseudo
+        global Network_Class, isHost, Pseudo, IsMultiplayer
 
         if self.Entry_Ip.get() == "" and self.isHost == False:
             messagebox.showerror("Erreur", "Vous devez indiquer une adresse IP !", parent = self.master)
         elif self.Entry_Pseudo.get() == "":
             messagebox.showerror("Erreur", "Vous devez entrer un pseudo !", parent = self.master)
+        elif len(self.Entry_Pseudo.get()) > 8:
+            messagebox.showerror("Erreur", "Votre pseudo est trop long !", parent = self.master)
         else:
             print("Lancement du multijoueur...")
 
@@ -729,6 +769,8 @@ class Multijoueur():
             self.Ip = self.Entry_Ip.get()
 
             Pseudo = self.Pseudo
+
+            IsMultiplayer = True
 
             if self.isHost:
                 isHost = True
@@ -821,6 +863,8 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.can = Canvas(self.frame, width = 500, height = 500, bg = "ivory")
         self.can.pack(side = RIGHT, padx = 0, pady =0)
 
+        self.master.bind('<Return>', self.Show_Debug)
+
         self.can.bind('<Button-1>', self.mouse_down) #On attribue le clic de la souris au canvas
 
         self.draw_Interface()
@@ -836,6 +880,19 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
             self.GEng.StartGame(1)
         else:
             self.GEng.StartGame(2)
+
+    def Show_Debug(self, event):
+
+        global Is_Windows
+
+        if Is_Windows != True:
+            print("Debug menu !")
+            termf = Frame(self.master, width = 400, height = 200)
+            termf.pack(fill=BOTH, expand=YES)
+            wid = termf.winfo_id()
+            os.system('xterm -into %d -geometry 80x20 -sb -e python &' % wid)
+        else:
+            print("Debug menu not available !")
     
     def draw_Interface(self): #Fonction dessinant l'interface principale
         
@@ -871,13 +928,25 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         Label_IsHost.pack()
         
         #-- Affichage des boutons
-        self.Button_ReturnToMenu = tkk.Button(self.frame, text = "Retourner au menu", command = self.Open_MainMenuWindow)
+        self.Button_ReturnToMenu = tkk.Button(self.frame, text = "Retourner au menu", command = self.Confirm_Exit)
         self.Button_ReturnToMenu.pack(side = BOTTOM, pady =3)
         self.Button_Restart = tkk.Button(self.frame, text='Redémarrer', command = self.Restart_Game)
         self.Button_Restart.pack(side = BOTTOM, padx =3, pady =3)
         Button_SkipTour = tkk.Button(self.frame, text='Passer le tour', command = self.Skip_Turn)
         Button_SkipTour.pack(side = BOTTOM, padx =5, pady =5)
         
+    def Confirm_Exit(self):
+
+        global Queue_GuiToMultiplayer, IsMultiplayer
+
+        Confirm = messagebox.askyesno("Etes-vous sur ?", "Voulez-vous vraiment retourner au menu et quitter la partie ?", parent = self.master)
+
+        if Confirm == True:
+
+            if IsMultiplayer:
+                Queue_GuiToMultiplayer.put("Disconnected!Exit")
+
+            self.Open_MainMenuWindow()
 
     def Hide_Window(self):
         self.master.withdraw()
@@ -901,10 +970,15 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         if priseMultiple == False:
             print("Restarting game !") 
             self.Update_Timer()
+
             if self.nbrJoueurs == 1:
                 self.GEng.StartGame(1)
             else:
-                self.GEng.StartGame(2)
+
+                if IsMultiplayer:
+                    self.GEng.StartGame(2)
+                else:
+                    self.GEng.StartGame(2)
 
     def Skip_Turn(self): #Fonction permettant de sauter son tour en jeu
         global priseMultiple, White_Has_Skip_Turn, Black_Has_Skip_Turn
@@ -924,10 +998,10 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.master.destroy()
 
     def Update_Timer(self): #Fonction mettant à jour le timer de jeu et l'interface si le jeu est fini
-        global timeLeft, Label_Timer, hasGameFinished, Root, Rules_Timer
+        global timeLeft, Label_Timer, hasGameFinished, Root, Rules_Timer, IsMultiplayer
 
         if hasGameFinished == False and Rules_Timer == True:
-            if timeLeft <= 0:
+            if timeLeft <= 0 and IsMultiplayer == False:
                 self.Skip_Turn()
             timeLeft -= 1000
             Label_Timer.config(text = "Temps restant : {}.{}".format(self.ConvertTime(timeLeft, False), self.ConvertTime(timeLeft, True)))
@@ -967,7 +1041,7 @@ class Network():
 
         self.Ip = Ip
         self.Hote = ""
-        self.Port = 12800
+        self.Port = 27016
 
         self.isHost = isHost
 
@@ -982,54 +1056,196 @@ class Network():
 
     def Serveur_Init(self):       
             
-        global Root
+        global Root, Queue_MultiplayerToGui
 
-        self.Process_Queue()
+        try:
 
-        self.connexion_principale = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.Process_Queue()
 
-        self.connexion_principale.bind((self.Hote, self.Port))
+            self.connexion_principale = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        self.connexion_principale.listen(5)
+            self.connexion_principale.bind((self.Hote, self.Port))
 
-        self.serveur_lance = True
+            self.connexion_principale.listen(5)
 
-        print("Le serveur écoute à présent sur le port {}".format(self.Port))
+            self.serveur_lance = True
 
-        while self.serveur_lance == True:
-            print("Waiting for message !")
-            self.Serveur_WaitMessage()
+            print("Le serveur écoute à présent sur le port {}".format(self.Port))
+
+            while self.serveur_lance == True:
+                print("Waiting for message !")
+                self.Serveur_WaitMessage()
+
+        except:
+
+            Queue_MultiplayerToGui.put("Disconnected!Error")
+            self.Serveur_StopServer()
+            return
 
     def Serveur_WaitMessage(self):
 
         global isConnected, Queue_MultiplayerToGui, TableauPions_Global, Pseudo
 
-        self.connexion_avec_client, self.infos_connexion = self.connexion_principale.accept()
+        try:
 
-        isConnected = True
+            self.connexion_avec_client, self.infos_connexion = self.connexion_principale.accept()
 
-        print("Client connected to server !")
+            isConnected = True
 
-        self.msg_recu = ""
+            print("Client connected to server !")
 
-        while self.msg_recu != b"End":
+            self.msg_recu = ""
 
-            print("Try to recieve message !")
+            while self.msg_recu != b"End":
 
-            self.msg_recu = self.connexion_avec_client.recv(10000)
+                print("Try to recieve message !")
 
-            if self.msg_recu != "":
+                self.msg_recu = self.connexion_avec_client.recv(10000)
 
-                print(self.msg_recu)
+                if self.msg_recu != "":
+
+                    print(self.msg_recu)
+
+                    self.msg_recu_decode = "".join(map(chr, self.msg_recu))
+
+                    print(self.msg_recu)
+                    print("Message get : " + self.msg_recu_decode)
+
+                    if self.msg_recu_decode.find("SwitchTurnAndGetArray!") != -1:
+
+                        print("Getting new array and switching turn !")
+
+                        msg_justByte = self.msg_recu[22:]
+
+                        TableauPions_Global = pickle.loads(msg_justByte)
+
+                        Queue_MultiplayerToGui.put("SetNewArrayAndSwitchTurn!")
+
+                    elif self.msg_recu_decode.find("SetPseudo!") != -1:
+
+                        msg_split = self.msg_recu_decode.split("!")
+
+                        AdvPseudo = msg_split[1]
+
+                        self.Serveur_SendMessage(b"SetPseudo!" + str.encode(Pseudo))
+
+                        Queue_MultiplayerToGui.put("SetPseudo!" + AdvPseudo)
+
+                    elif self.msg_recu_decode.find("Disconnected!") != -1:
+
+                        print("Client disconnected !")
+
+                        Queue_MultiplayerToGui.put("Disconnected!Exit")
+
+                        self.Serveur_StopServer()
+
+
+                    elif self.msg_recu_decode.find("StopServer!") != -1:
+
+                        print("Stopping server !")
+
+                        self.Serveur_StopServer()
+
+                    self.msg_recu = ""
+        except:
+
+            Queue_MultiplayerToGui.put("Disconnected!Error")
+            self.Serveur_StopServer()
+            return
+
+    def Serveur_SendMessage(self, messageToSend):
+
+        global Queue_MultiplayerToGui
+
+        try:
+
+            print("Sending message to client !")
+
+            self.connexion_avec_client.send(messageToSend)
+
+        except:
+
+            Queue_MultiplayerToGui.put("Disconnected!Error")
+            self.Serveur_StopServer()
+
+    def Serveur_StopServer(self):
+
+        try:
+
+            print("Stopping server connection !")
+
+            self.connexion_avec_client.close()
+            self.connexion_principale.close()
+
+        except:
+
+            print("Error while closing connection to client !")
+            return
+
+    def Client_Init(self):
+
+        global isConnected, Root, Queue_MultiplayerToGui
+
+        try:
+
+            self.connexion_avec_serveur = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.connexion_avec_serveur.connect((self.Ip, self.Port))
+
+            #self.connexion_avec_serveur.setblocking(0)
+
+            print("Connexion établie avec le serveur sur le port {}".format(self.Port))
+
+            isConnected = True
+
+            while True:
+          
+                self.Process_Queue()
+                time.sleep(0.1)
+
+        except:
+
+            Queue_MultiplayerToGui.put("Disconnected!Error")
+            self.Client_CloseConnection()
+            return
+
+    def Client_SendMessage(self, MessageToSend):
+
+        global Queue_MultiplayerToGui
+
+        try:
+
+            print("Sending message...")
+
+            self.msg_a_envoyer = MessageToSend
+
+            # On envoie le message
+            self.connexion_avec_serveur.send(self.msg_a_envoyer)
+        except:
+
+            Queue_MultiplayerToGui.put("Disconnected!Error")
+            self.Client_CloseConnection()
+            return
+
+
+    def Client_WaitForServerResponse(self):
+
+        global Queue_MultiplayerToGui, TableauPions_Global
+
+        try:
+
+            self.msg_recu = ""
+
+            while self.msg_recu == "":
+
+                print("Waiting for server response !")
+     
+                self.msg_recu = self.connexion_avec_serveur.recv(10000)
 
                 self.msg_recu_decode = "".join(map(chr, self.msg_recu))
 
                 print(self.msg_recu)
-                print("Message get : " + self.msg_recu_decode)
 
                 if self.msg_recu_decode.find("SwitchTurnAndGetArray!") != -1:
-
-                    print("Getting new array and switching turn !")
 
                     msg_justByte = self.msg_recu[22:]
 
@@ -1037,108 +1253,37 @@ class Network():
 
                     Queue_MultiplayerToGui.put("SetNewArrayAndSwitchTurn!")
 
+                    break
+
                 elif self.msg_recu_decode.find("SetPseudo!") != -1:
 
                     msg_split = self.msg_recu_decode.split("!")
 
-                    AdvPseudo = msg_split[1]
+                    Pseudo = msg_split[1]
 
-                    self.Serveur_SendMessage(b"SetPseudo!" + str.encode(Pseudo))
+                    Queue_MultiplayerToGui.put("SetPseudo!" + Pseudo)
 
-                    Queue_MultiplayerToGui.put("SetPseudo!" + AdvPseudo)
+                time.sleep(0.1)
 
+        except:
 
-                elif self.msg_recu_decode.find("StopServer!") != -1:
-
-                    print("Stopping server !")
-
-                    self.Serveur_StopServer()
-
-                self.msg_recu = ""
-
-    def Serveur_SendMessage(self, messageToSend):
-
-        print("Sending message to client !")
-
-        self.connexion_avec_client.send(messageToSend)
-
-    def Serveur_StopServer(self):
-
-        print("Stopping server connection !")
-
-        self.connexion_avec_client.close()
-        self.connexion_principale.close()
-
-    def Client_Init(self):
-
-        global isConnected, Root  
-
-        self.connexion_avec_serveur = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.connexion_avec_serveur.connect((self.Ip, self.Port))
-
-        #self.connexion_avec_serveur.setblocking(0)
-
-        print("Connexion établie avec le serveur sur le port {}".format(self.Port))
-
-        isConnected = True
-
-        while True:
-          
-            self.Process_Queue()
-            time.sleep(0.1)
-
-    def Client_SendMessage(self, MessageToSend):
-
-        print("Sending message...")
-
-        self.msg_a_envoyer = MessageToSend
-
-        # On envoie le message
-        self.connexion_avec_serveur.send(self.msg_a_envoyer)
-
-
-    def Client_WaitForServerResponse(self):
-
-        global Queue_MultiplayerToGui, TableauPions_Global
-
-        self.msg_recu = ""
-
-        while self.msg_recu == "":
-
-            print("Waiting for server response !")
-     
-            self.msg_recu = self.connexion_avec_serveur.recv(10000)
-
-            self.msg_recu_decode = "".join(map(chr, self.msg_recu))
-
-            print(self.msg_recu)
-
-            if self.msg_recu_decode.find("SwitchTurnAndGetArray!") != -1:
-
-                msg_justByte = self.msg_recu[22:]
-
-                TableauPions_Global = pickle.loads(msg_justByte)
-
-                Queue_MultiplayerToGui.put("SetNewArrayAndSwitchTurn!")
-
-                break
-
-            elif self.msg_recu_decode.find("SetPseudo!") != -1:
-
-                msg_split = self.msg_recu_decode.split("!")
-
-                Pseudo = msg_split[1]
-
-                Queue_MultiplayerToGui.put("SetPseudo!" + Pseudo)
-
-            time.sleep(0.1)
+            Queue_MultiplayerToGui.put("Disconnected!Error")
+            self.Client_CloseConnection()
+            return
 
 
     def Client_CloseConnection(self):
 
-        print("Closing connection to the server !")
+        try:
 
-        self.connexion_avec_serveur.close()
+            print("Closing connection to the server !")
+
+            self.connexion_avec_serveur.close()
+
+        except:
+
+            print("Error while closing connection to server !")
+            return
 
     def Process_Queue(self):
 
@@ -1189,6 +1334,16 @@ class Network():
 
                 self.Client_WaitForServerResponse()
 
+            elif msg_get.find("Disconnected!") != -1:
+
+                print("Disconnecting !")
+
+                msg_split = str.split(msg_get, "!")
+
+                if msg_split[1] == "Exit":
+                    self.Client_SendMessage(b"Disconnected!Exit")
+                    self.Client_CloseConnection()
+
             else:            
                 print("Invalid message in Multiplayer queue !")
 
@@ -1200,10 +1355,8 @@ class Network():
             if isHost:
                 Root.after(100, self.Process_Queue)
 
-            print("No message in queue !")
-
-            
-
+            #print("No message in queue !")
+          
 
 class GameEngine(): #Classe représentant le moteur du jeu
     
@@ -1248,9 +1401,6 @@ class GameEngine(): #Classe représentant le moteur du jeu
         self.Network_Team = "Blanc"
 
     ##Fonctions multijoueurs
-    def __getstate__(self): return self.__dict__
-
-    def __setstate__(self, d): self.__dict__.update(d)
 
     def Process_Queue(self):
 
@@ -1272,17 +1422,37 @@ class GameEngine(): #Classe représentant le moteur du jeu
 
                 self.TableauPions = TableauPions_Global
 
+                self.Multiplayer_SetNbrPions()
+
+                self.UpdateGui()
+
+                self.PlaySound("Data/Sounds/Move.wav")
+
                 self.Refresh(True, True)
 
             elif msg.find("SetPseudo!") != -1:
 
                 msg_split = str.split(msg, "!")
 
-                if self.isHost:
+                if self.isHost:                    
+                    self.TableauJoueurs[1].NomJoueur = msg_split[1]
                     Label_Joueur2.configure(text = "-- " + msg_split[1] + " --")
                 else:
+                    self.TableauJoueurs[0].NomJoueur = msg_split[1]
                     Label_Joueur1.configure(text = "-- " + msg_split[1] + " --")
 
+            elif msg.find("Disconnected!") != -1:
+
+                msg_split = str.split(msg, "!")
+
+                if msg_split[1] == "Error":
+                    messagebox.showerror("Erreur", "Une erreur réseau est survenue !", parent = self.master)
+                    self.Open_MainMenuWindow()
+                    return
+                elif msg_split[1] == "Exit":
+                    messagebox.showerror("Deconnexion", "Votre adversaire a quitté la partie !", parent = self.master)
+                    self.Open_MainMenuWindow()
+                    return
             else:
 
                 print("Invalid message in GUI queue !")
@@ -1322,12 +1492,17 @@ class GameEngine(): #Classe représentant le moteur du jeu
 
         if self.isMultiplayer:
 
+            Rules_DamesEnable = True
+            Rules_PriseMultipleEnable = True
+            Rules_PriseObligatoireEnable = True
+            Rules_Timer = True
+
             if self.isHost:
                 self.Network_Team = "Noir"
-                Label_Joueur1.configure(text = "-- " + self.Pseudo + " --")
+                Label_Joueur1.configure(text = "-- " + self.Pseudo + " (Vous) --")
             else:
                 Queue_GuiToMultiplayer.put("SetPseudo!" + self.Pseudo)
-                Label_Joueur2.configure(text = "-- " + self.Pseudo + " --")
+                Label_Joueur2.configure(text = "-- " + self.Pseudo + " (Vous) --")
                 self.Network_Team = "Blanc"
 
             self.Process_Queue()
@@ -1457,9 +1632,18 @@ class GameEngine(): #Classe représentant le moteur du jeu
             Button_SkipTour.configure(state = DISABLED)
 
             if self.TableauJoueurs[0].nbrPions == 0:
-                messagebox.showinfo("Gagné !!!", "J2 a gagné !", parent = self.master)
+
+                if self.isMultiplayer:
+                    messagebox.showinfo("Gagné !!!", self.TableauJoueurs[1].NomJoueur + " a gagné !", parent = self.master)
+                else:
+                    messagebox.showinfo("Gagné !!!", "J2 a gagné !", parent = self.master)
             elif self.TableauJoueurs[1].nbrPions == 0:
-                messagebox.showinfo("Gagné !!!", "J1 a gagné !", parent = self.master)
+
+                if self.isMultiplayer:
+                    messagebox.showinfo("Gagné !!!", self.TableauJoueurs[0].NomJoueur + " a gagné !", parent = self.master)
+                else:
+                    messagebox.showinfo("Gagné !!!", "J1 a gagné !", parent = self.master)
+
             elif isEquality == True:
                 messagebox.showinfo("Egalité !", "Il y a égalité !", parent = self.master)
 
@@ -1479,12 +1663,15 @@ class GameEngine(): #Classe représentant le moteur du jeu
         if newTurn == True:
 
             if self.isMultiplayer and fromNetwork == False:
+
                 TableauPions_Global = self.TableauPions
+
                 if self.isHost:
                     Queue_GuiToMultiplayer.put("SendPionArrayToClient!")
                 else:
                     Queue_GuiToMultiplayer.put("SendPionArrayToServer!")
 
+                
             if (self.teamToPlay == "Blanc") or (self.teamToPlay == "Blanc" and self.isSkip == True):
                 self.teamToPlay = "Noir"
                 self.isFirstTurn = False
@@ -1492,26 +1679,49 @@ class GameEngine(): #Classe représentant le moteur du jeu
                 self.teamToPlay = "Blanc"
                 self.isFirstTurn = False
 
-        if (self.teamToPlay == "Noir" and Black_Has_Skip_Turn) or (self.teamToPlay == "Blanc" and White_Has_Skip_Turn):
-            Button_SkipTour.configure(state = DISABLED)
-        elif hasGameFinished == False:
+
+        if (self.teamToPlay == "Noir" and Black_Has_Skip_Turn) or (self.teamToPlay == "Blanc" and White_Has_Skip_Turn) or (self.teamToPlay != self.Network_Team) or (hasGameFinished == True):
+            if self.isMultiplayer == True and self.teamToPlay != self.Network_Team:
+                Button_SkipTour.configure(state = DISABLED)
+            elif (self.teamToPlay == "Noir" and Black_Has_Skip_Turn) or (self.teamToPlay == "Blanc" and White_Has_Skip_Turn):
+                Button_SkipTour.configure(state = DISABLED)
+            elif hasGameFinished == True:
+                 Button_SkipTour.configure(state = DISABLED)
+            else:
+                Button_SkipTour.configure(state = ACTIVE)
+
+        elif hasGameFinished == False or self.teamToPlay == self.Network_Team:
             Button_SkipTour.configure(state = ACTIVE)
 
 
         timeLeft = 180000                   
         self.UpdateGui()
+
+    def Multiplayer_SetNbrPions(self):
+
+        nbrPions_Blancs = 0
+        nbrPions_Noirs = 0
+
+        for i in range(len(self.TableauPions)):
+            if self.TableauPions[i].Couleur == "Blanc":
+                nbrPions_Blancs += 1
+            elif self.TableauPions[i].Couleur == "Noir":
+                nbrPions_Noirs += 1
+        
+        self.TableauJoueurs[0].nbrPions = nbrPions_Noirs
+        self.TableauJoueurs[1].nbrPions = nbrPions_Blancs
+
+
             
     def CheckEgalite(self):    
-
 
         if self.isMove == True:
             self.NombreCoupsSansPrise = 0
         else:
             self.NombreCoupsSansPrise += 1
 
-
         if self.NombreCoupsSansPrise >= 25:
-            return True
+            return False
         
         nbrDames_Blanches = 0
         nbrDames_Noires = 0
@@ -1789,7 +1999,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
 
     def selectPion_OnClick(self, PosX, PosY): #Fonction s'éxécutant en cas de click du joueur sur le damier
         
-        global Rules_PriseObligatoireEnable
+        global Rules_PriseObligatoireEnable, hasGameFinished
 
         #Suppression des formes géométriques si elles sont déjà créer
         self.deleteMoveGraphObject()   
@@ -1801,7 +2011,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
         #On obtient l'id de la case en fonction d'où l'on a cliqué
         caseIdClicked = self.getCaseIdByPos(PosX, PosY)
 
-        if self.isMultiplayer == True and self.Network_Team != self.teamToPlay:
+        if (self.isMultiplayer == True and self.Network_Team != self.teamToPlay) or (hasGameFinished == True):
             caseIdClicked = 0
             return
 
@@ -2002,38 +2212,81 @@ class GameEngine(): #Classe représentant le moteur du jeu
             return False
     
     def PlaySound(self, FileName):
+
+        global Is_Windows
+
         print("Playing sound !")
         
         file = FileName
 
-        if sys.platform.startswith('win'): #Si on est sous windows on lance le son
+        if Is_Windows: #Si on est sous windows on lance le son
 
             from winsound import PlaySound, SND_FILENAME, SND_ASYNC
             PlaySound(file, SND_FILENAME|SND_ASYNC)
 
-        elif sys.platform.find('linux')>-1: #Sinon on lance avec la librairie linux
+        else: #Sinon on lance avec la librairie linux
 
-            from wave import open as waveOpen
-            from ossaudiodev import open as ossOpen
+            from AppKit import NSSound
+            import wave
+            import io
 
-            s = waveOpen('tada.wav','rb')
-            (nc,sw,fr,nf,comptype, compname) = s.getparams( )
-            dsp = ossOpen('/dev/dsp','w')
-            try:
-                print("..")
-                from ossaudiodev import AFMT_S16_NE
+            sound = NSSound.alloc()
+            sound.initWithContentsOfFile_byReference_(FileName, True)
+            sound.play()
+            sleep(sound.duration())
 
-            except ImportError:
-                if byteorder == "little":
-                    AFMT_S16_NE = ossaudiodev.AFMT_S16_LE
-                else:
-                    AFMT_S16_NE = ossaudiodev.AFMT_S16_BE
+            #wave_output = io.BytesIO()
+            #wave_shell = wave.open(wave_output, mode="wb")
+            #file_path = FileName
+            #input_audio = wave.open(file_path)
+            #input_audio_frames = input_audio.readframes(input_audio.getnframes())
 
-            dsp.setparameters(AFMT_S16_NE, nc, fr)
-            data = s.readframes(nf)
-            s.close()
-            dsp.write(data)
-            dsp.close()  
+            #wave_shell.setnchannels(input_audio.getnchannels())
+            #wave_shell.setsampwidth(input_audio.getsampwidth())
+            #wave_shell.setframerate(input_audio.getframerate())
+
+            #seconds_multiplier = input_audio.getnchannels() * input_audio.getsampwidth() * input_audio.getframerate()
+
+            #wave_shell.writeframes(input_audio_frames[second_multiplier:second_multiplier*5])
+
+            #wave_shell.close()
+
+            #wave_output.seek(0)
+            #wave_data = wave_output.read()
+            #audio_stream = NSSound.alloc()
+            #audio_stream.initWithData_(wave_data)
+            #audio_stream.play()
+
+            #from wave import open as waveOpen
+            #from ossaudiodev import open as ossOpen
+
+            #s = waveOpen('tada.wav','rb')
+            #(nc,sw,fr,nf,comptype, compname) = s.getparams( )
+            #dsp = ossOpen('/dev/dsp','w')
+            #try:
+            #    print("..")
+            #    from ossaudiodev import AFMT_S16_NE
+
+            #except ImportError:
+            #    if byteorder == "little":
+            #        AFMT_S16_NE = ossaudiodev.AFMT_S16_LE
+            #    else:
+            #        AFMT_S16_NE = ossaudiodev.AFMT_S16_BE
+
+            #dsp.setparameters(AFMT_S16_NE, nc, fr)
+            #data = s.readframes(nf)
+            #s.close()
+            #dsp.write(data)
+            #dsp.close()  
+
+    def Open_MainMenuWindow(self):
+        Root.title("Jeu de Dames - Menu Principal")
+        self.Hide_Window()
+        self.newWindow = Toplevel(self.master)
+        self.app = MainMenu(self.newWindow)
+
+    def Hide_Window(self):
+        self.master.withdraw()
 
 # --- Fonctions Graphiques et utilitaires ---
 
