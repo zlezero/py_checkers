@@ -465,7 +465,7 @@ class Options(): #Classe représentant le menu des options
         self.CheckButton_PriseMultiple.configure(text="Prise multiple")
 
         self.CheckButton_PriseObligatoire = Checkbutton(self.LabelFrame_Regles, command = self.CheckButtonPriseObligatoire_Tick)
-        self.CheckButton_PriseObligatoire.place(relx=0.08, rely=0.32, relheight=0.14, relwidth=0.45)
+        self.CheckButton_PriseObligatoire.place(relx=0.07, rely=0.32, relheight=0.14, relwidth=0.5)
         self.CheckButton_PriseObligatoire.configure(activebackground="#d9d9d9")
         self.CheckButton_PriseObligatoire.configure(activeforeground="#000000")
         self.CheckButton_PriseObligatoire.configure(background="#d9d9d9")
@@ -477,7 +477,7 @@ class Options(): #Classe représentant le menu des options
         self.CheckButton_PriseObligatoire.configure(text="Prise obligatoire")
 
         self.CheckButton_Timer = Checkbutton(self.LabelFrame_Regles, command = self.CheckButtonTimer_Tick)
-        self.CheckButton_Timer.place(relx=0.53, rely=0.32, relheight=0.14, relwidth=0.47)
+        self.CheckButton_Timer.place(relx=0.05, rely=0.48, relheight=0.14, relwidth=0.30)
         self.CheckButton_Timer.configure(activebackground="#d9d9d9")
         self.CheckButton_Timer.configure(activeforeground="#000000")
         self.CheckButton_Timer.configure(background="#d9d9d9")
@@ -651,6 +651,7 @@ class Multijoueur():
         self.isHost = False
         self.Ip = ""
         self.Pseudo = ""
+        self.Port = 27016
 
         self.Draw_Interface()
 
@@ -695,6 +696,17 @@ class Multijoueur():
         self.Checkbutton_Host.configure(justify=LEFT)
         self.Checkbutton_Host.configure(text="Etre l'hôte")
 
+        self.Label_Port = tkk.Label(self.Labelframe_Config)
+        self.Label_Port.place(relx=0.38, rely=0.43, height=19, width=30)
+        self.Label_Port.configure(background="#d9d9d9")
+        self.Label_Port.configure(foreground="#000000")
+        self.Label_Port.configure(relief = FLAT)
+        self.Label_Port.configure(text = "Port :")
+        
+        self.Entry_Port = tkk.Entry(self.Labelframe_Config)
+        self.Entry_Port.place(relx=0.53, rely = 0.43, height = 20, width = 98)
+        self.Entry_Port.insert(END, str(self.Port))
+        
         self.Label_MyIp = ttk.Label(self.Labelframe_Config)
         self.Label_MyIp.place(relx=0.02, rely=0.69, height=19, width=216)
         self.Label_MyIp.configure(background="#d9d9d9")
@@ -756,13 +768,24 @@ class Multijoueur():
 
         global Network_Class, isHost, Pseudo, IsMultiplayer
 
+        portEntree = self.Entry_Port.get()
+        
         if self.Entry_Ip.get() == "" and self.isHost == False:
             messagebox.showerror("Erreur", "Vous devez indiquer une adresse IP !", parent = self.master)
         elif self.Entry_Pseudo.get() == "":
             messagebox.showerror("Erreur", "Vous devez entrer un pseudo !", parent = self.master)
         elif len(self.Entry_Pseudo.get()) > 8:
             messagebox.showerror("Erreur", "Votre pseudo est trop long !", parent = self.master)
+        elif portEntree.isnumeric() == False:
+            messagebox.showerror("Erreur", "Le port est invalide !", parent = self.master)
         else:
+            
+            if len(self.Entry_Port.get()) <= 5 and int(self.Entry_Port.get()) > 0 and int(self.Entry_Port.get()) <= 65536:
+                self.Port = int(self.Entry_Port.get())
+            else:
+                messagebox.showerror("Erreur", "Le port n'est pas valide !", parent = self.master)
+                return
+        
             print("Lancement du multijoueur...")
 
             self.Pseudo = self.Entry_Pseudo.get()
@@ -774,11 +797,11 @@ class Multijoueur():
 
             if self.isHost:
                 isHost = True
-                Network_Class = Network(self.Ip, True)
+                Network_Class = Network(self.Ip, True, self.Port)
                 self.Launch_Host()
             else:
                 isHost = False
-                Network_Class = Network(self.Ip, False)
+                Network_Class = Network(self.Ip, False, self.Port)
                 self.Launch_Client()
 
     def Launch_Host(self):
@@ -853,7 +876,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
     
     def __init__(self, master, nbrJoueurs): #Initialisation de l'interface et de la classe
 
-        global timeLeft
+        global timeLeft, Label_Joueur2
 
         self.master = master
         self.frame = Frame(master)
@@ -876,7 +899,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.Update_Timer() #On lance le timer du jeu
 
         if self.nbrJoueurs == 1:
-            self.Label_Joueur2.config(text = "-- Joueur 2 (Ia) --")
+            Label_Joueur2.config(text = "-- Joueur 2 (Ia) --")
             self.GEng.StartGame(1)
         else:
             self.GEng.StartGame(2)
@@ -1037,11 +1060,11 @@ class Case(): #Classe représentant une case du damier
       
 class Network():
 
-    def __init__(self, Ip, isHost):
+    def __init__(self, Ip, isHost, Port):
 
         self.Ip = Ip
         self.Hote = ""
-        self.Port = 27016
+        self.Port = Port
 
         self.isHost = isHost
 
@@ -1607,7 +1630,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
         while self.TableauPions[pionSelect].Couleur != "Noir" and caseSelect not in listeInterdit:
             pionSelect = random.choice(pionCanMove) 
 
-        self.movePion(pionSelect, "DiagGaucheBas", caseSelect, False)
+        self.movePion(pionSelect, "IA", caseSelect, False)
 
         self.Tour(True, False, False)
 
@@ -1820,6 +1843,8 @@ class GameEngine(): #Classe représentant le moteur du jeu
         elif pionDirection == "DiagGaucheHaut":
             print("Déplacement : Diagonale Gauche Haut")
             numberChange = -11
+        elif pionDirection == "IA":
+            print("Déplacement IA !")
         else:
             print("Direction inconnue !")
             return
@@ -2225,15 +2250,15 @@ class GameEngine(): #Classe représentant le moteur du jeu
             PlaySound(file, SND_FILENAME|SND_ASYNC)
 
         else: #Sinon on lance avec la librairie linux
+            return
+            # from AppKit import NSSound
+            # import wave
+            # import io
 
-            from AppKit import NSSound
-            import wave
-            import io
-
-            sound = NSSound.alloc()
-            sound.initWithContentsOfFile_byReference_(FileName, True)
-            sound.play()
-            sleep(sound.duration())
+           ##   sound = NSSound.alloc()
+            # sound.initWithContentsOfFile_byReference_(FileName, True)
+            # sound.play()
+            # sleep(sound.duration())
 
             #wave_output = io.BytesIO()
             #wave_shell = wave.open(wave_output, mode="wb")
