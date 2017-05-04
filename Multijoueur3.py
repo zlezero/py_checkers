@@ -1,4 +1,4 @@
-﻿import time, random , wave, os, select, pickle, socket, queue, errno
+import time, random , wave, os, select, pickle, socket, queue, errno
 import urllib.request
 from tkinter import ttk as tkk
 from threading import Thread
@@ -44,6 +44,8 @@ Black_Has_Skip_Turn = False
 IA_Version = 1
 
 Is_Windows = False
+
+Timer_After = None
 
 #Variables Multijoueurs
 
@@ -842,6 +844,7 @@ class Multijoueur():
                 break
 
     def ResetUi(self):
+            
         self.Checkbutton_Host.deselect()
     
     def CheckBoxHost_Tick(self):
@@ -856,6 +859,7 @@ class Multijoueur():
             self.Entry_Ip.configure(state = ACTIVE)
 
     def Open_GameWindow(self): #Fonction ouvrant la fenêtre de jeu
+    
          Root.title("Jeu de Dames - Jeu")
          self.Hide_Window()
          self.newWindow = Toplevel(self.master)
@@ -899,10 +903,10 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.Update_Timer() #On lance le timer du jeu
 
         if self.nbrJoueurs == 1:
-            Label_Joueur2.config(text = "-- Joueur 2 (Ia) --")
-            self.GEng.StartGame(1)
+            Label_Joueur1.config(text = "-- Joueur 1 (Ia) --")
+            self.GEng.StartGame(1, False)
         else:
-            self.GEng.StartGame(2)
+            self.GEng.StartGame(2, False)
 
     def Show_Debug(self, event):
 
@@ -943,13 +947,13 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         Label_Timer = Label(self.frame, text = "Temps restant : {}.{}".format(self.ConvertTime(timeLeft, False), self.ConvertTime(timeLeft, True)))
         Label_Timer.pack(pady = 10)
 
-        if isHost:
+        if isHost and IsMultiplayer == True:
             Label_IsHost = Label(self.frame, text = "Host - Equipe noire")
-        else:
+            Label_IsHost.pack()
+        elif IsMultiplayer == True:
             Label_IsHost = Label(self.frame, text = "Client - Equipe blanche")
-
-        Label_IsHost.pack()
-        
+            Label_IsHost.pack()
+            
         #-- Affichage des boutons
         self.Button_ReturnToMenu = tkk.Button(self.frame, text = "Retourner au menu", command = self.Confirm_Exit)
         self.Button_ReturnToMenu.pack(side = BOTTOM, pady =3)
@@ -979,6 +983,11 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.master.deiconify()
 
     def Open_MainMenuWindow(self):
+        global Root, Timer_After
+        
+        if Timer_After != None:
+            Root.after_cancel(Timer_After)
+            
         Root.title("Jeu de Dames - Menu Principal")
         self.Hide_Window()
         self.newWindow = Toplevel(self.master)
@@ -989,19 +998,28 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.GEng.selectPion_OnClick(event.x, event.y)
     
     def Restart_Game(self): #Fonction redémarrant la partie
-        global priseMultiple
+    
+        global priseMultiple, IsMultiplayer
+        
         if priseMultiple == False:
-            print("Restarting game !") 
-            self.Update_Timer()
-
-            if self.nbrJoueurs == 1:
-                self.GEng.StartGame(1)
-            else:
-
-                if IsMultiplayer:
-                    self.GEng.StartGame(2)
+            
+             Confirm = messagebox.askyesno("Etes-vous sur ?", "Voulez-vous vraiment redémarrer la partie ?", parent = self.master)
+             
+             if Confirm == True:
+             
+                print("Restarting game !") 
+                self.Update_Timer()
+    
+                if self.nbrJoueurs == 1:
+                    self.GEng.StartGame(1, True)
                 else:
-                    self.GEng.StartGame(2)
+    
+                    if IsMultiplayer:
+                        self.GEng.StartGame(2, True)
+                    else:
+                        self.GEng.StartGame(2, True)
+        else:
+            messagebox.showerror("Erreur", "Vous ne pouvez pas redémarrer la partie actuellement !", parent = self.master)
 
     def Skip_Turn(self): #Fonction permettant de sauter son tour en jeu
         global priseMultiple, White_Has_Skip_Turn, Black_Has_Skip_Turn
@@ -1021,15 +1039,16 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.master.destroy()
 
     def Update_Timer(self): #Fonction mettant à jour le timer de jeu et l'interface si le jeu est fini
-        global timeLeft, Label_Timer, hasGameFinished, Root, Rules_Timer, IsMultiplayer
+        global timeLeft, Label_Timer, hasGameFinished, Root, Rules_Timer, IsMultiplayer, Timer_After
 
         if hasGameFinished == False and Rules_Timer == True:
-            if timeLeft <= 0 and IsMultiplayer == False:
+            if (timeLeft <= 0 or timeLeft > 180001) and IsMultiplayer == False:
                 self.Skip_Turn()
             timeLeft -= 1000
             Label_Timer.config(text = "Temps restant : {}.{}".format(self.ConvertTime(timeLeft, False), self.ConvertTime(timeLeft, True)))
 
-        Root.after(1000, self.Update_Timer)
+        Timer_After = Root.after(1000, self.Update_Timer)
+        
     
     def ConvertTime(self, timeLeft, toSeconds):
         if toSeconds == True:
@@ -1490,9 +1509,9 @@ class GameEngine(): #Classe représentant le moteur du jeu
 
     ##Fin des fonctions multijoueurs
 
-    def StartGame(self, nombreJoueurs): #Fonction se lançant au début de la partie
+    def StartGame(self, nombreJoueurs, isRestart): #Fonction se lançant au début de la partie
 
-        global Rules_DamesEnable, Rules_PriseMultipleEnable, Rules_PriseObligatoireEnable, Button_SkipTour, hasGameFinished, timeLeft, Queue_GuiToMultiplayer, Label_Joueur1, Label_Joueur2
+        global Rules_DamesEnable, Rules_PriseMultipleEnable, Rules_PriseObligatoireEnable, Button_SkipTour, hasGameFinished, timeLeft, Queue_GuiToMultiplayer, Label_Joueur1, Label_Joueur2, Timer_After, Root
 
         print("Démarrage / Redémarrage du jeu")
 
@@ -1502,7 +1521,10 @@ class GameEngine(): #Classe représentant le moteur du jeu
         print("Dames : ", Rules_DamesEnable)
 
         self.teamToPlay = "Blanc" #On force à jouer les blancs en cas de redémarrage
-
+        
+        if Timer_After != None and isRestart:
+            Root.after_cancel(Timer_After)
+            
         Button_SkipTour.configure(state = ACTIVE)
 
         hasGameFinished = False
@@ -1797,8 +1819,8 @@ class GameEngine(): #Classe représentant le moteur du jeu
     def GenerateTableauPlayer(self, numberPlayers):
         nombreJoueurs = numberPlayers
         if nombreJoueurs == 1:
-            self.TableauJoueurs[0] = Player("Joueur 1", 1, 20, False)
-            self.TableauJoueurs[1] = Player("Joueur 2 (Ia)", 2, 20, True)
+            self.TableauJoueurs[0] = Player("Joueur 1 (Ia)", 1, 20, False)
+            self.TableauJoueurs[1] = Player("Joueur 2", 2, 20, True)
         elif nombreJoueurs == 2:
             self.TableauJoueurs[0] = Player("Joueur 1", 1, 20, False)
             self.TableauJoueurs[1] = Player("Joueur 2", 2, 20, False)
@@ -2305,10 +2327,16 @@ class GameEngine(): #Classe représentant le moteur du jeu
             #dsp.close()  
 
     def Open_MainMenuWindow(self):
+        global Root, Timer_After
+        
+        if Timer_After != None:
+            Root.after_cancel(Timer_After)
+        
         Root.title("Jeu de Dames - Menu Principal")
         self.Hide_Window()
         self.newWindow = Toplevel(self.master)
         self.app = MainMenu(self.newWindow)
+        
 
     def Hide_Window(self):
         self.master.withdraw()
