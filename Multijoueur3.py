@@ -1,4 +1,4 @@
-import time, random , wave, os, select, pickle, socket, queue, errno
+﻿import time, random , wave, os, select, pickle, socket, queue, errno
 import urllib.request
 from tkinter import ttk as tkk
 from threading import Thread
@@ -52,6 +52,8 @@ Timer_After = None
 IsMultiplayer = False
 isConnected = False
 isHost = False
+
+keepWaiting = True
 
 Pseudo = ""
 
@@ -655,6 +657,8 @@ class Multijoueur():
         self.Pseudo = ""
         self.Port = 27016
 
+        self.isLaunched = False
+
         self.Draw_Interface()
 
     def Draw_Interface(self):
@@ -770,41 +774,57 @@ class Multijoueur():
 
         global Network_Class, isHost, Pseudo, IsMultiplayer
 
-        portEntree = self.Entry_Port.get()
+        if self.isLaunched != True:
+            portEntree = self.Entry_Port.get()
         
-        if self.Entry_Ip.get() == "" and self.isHost == False:
-            messagebox.showerror("Erreur", "Vous devez indiquer une adresse IP !", parent = self.master)
-        elif self.Entry_Pseudo.get() == "":
-            messagebox.showerror("Erreur", "Vous devez entrer un pseudo !", parent = self.master)
-        elif len(self.Entry_Pseudo.get()) > 8:
-            messagebox.showerror("Erreur", "Votre pseudo est trop long !", parent = self.master)
-        elif portEntree.isnumeric() == False:
-            messagebox.showerror("Erreur", "Le port est invalide !", parent = self.master)
-        else:
+            if self.Entry_Ip.get() == "" and self.isHost == False:
+                messagebox.showerror("Erreur", "Vous devez indiquer une adresse IP !", parent = self.master)
+            elif self.Entry_Pseudo.get() == "":
+                messagebox.showerror("Erreur", "Vous devez entrer un pseudo !", parent = self.master)
+            elif len(self.Entry_Pseudo.get()) > 8:
+                messagebox.showerror("Erreur", "Votre pseudo est trop long !", parent = self.master)
+            elif portEntree.isnumeric() == False:
+                messagebox.showerror("Erreur", "Le port est invalide !", parent = self.master)
+            else:
             
-            if len(self.Entry_Port.get()) <= 5 and int(self.Entry_Port.get()) > 0 and int(self.Entry_Port.get()) <= 65536:
-                self.Port = int(self.Entry_Port.get())
-            else:
-                messagebox.showerror("Erreur", "Le port n'est pas valide !", parent = self.master)
-                return
+                if len(self.Entry_Port.get()) <= 5 and int(self.Entry_Port.get()) > 0 and int(self.Entry_Port.get()) <= 65536:
+                    self.Port = int(self.Entry_Port.get())
+                else:
+                    messagebox.showerror("Erreur", "Le port n'est pas valide !", parent = self.master)
+                    return
         
-            print("Lancement du multijoueur...")
+                print("Lancement du multijoueur...")
 
-            self.Pseudo = self.Entry_Pseudo.get()
-            self.Ip = self.Entry_Ip.get()
+                self.Pseudo = self.Entry_Pseudo.get()
+                self.Ip = self.Entry_Ip.get()
 
-            Pseudo = self.Pseudo
+                Pseudo = self.Pseudo
 
-            IsMultiplayer = True
+                IsMultiplayer = True
 
-            if self.isHost:
-                isHost = True
-                Network_Class = Network(self.Ip, True, self.Port)
-                self.Launch_Host()
-            else:
-                isHost = False
-                Network_Class = Network(self.Ip, False, self.Port)
-                self.Launch_Client()
+                #Ajustement de l'interface
+
+                self.Entry_Port.configure(state = DISABLED)
+                self.Entry_Pseudo.configure(state = DISABLED)
+                self.Entry_Ip.configure(state = DISABLED)
+                self.Checkbutton_Host.configure(state = DISABLED)
+
+                self.Button_Launch.configure(text = "Annuler")
+
+                self.isLaunched = True
+
+                if self.isHost:
+
+                    isHost = True
+                    Network_Class = Network(self.Ip, True, self.Port)
+                    self.Launch_Host()
+                else:
+                    isHost = False
+                    Network_Class = Network(self.Ip, False, self.Port)
+                    self.Launch_Client()
+        else:
+            messagebox.showerror("Erreur", "Vous avez déjà lancé le multijoueur !")
+
 
     def Launch_Host(self):
 
@@ -832,9 +852,9 @@ class Multijoueur():
 
     def WaitForConnection(self):
 
-        global isConnected
+        global isConnected, keepWaiting
 
-        while isConnected == False:
+        while isConnected == False or keepWaiting:
 
             print("Wait for connection...")
 
@@ -1442,6 +1462,8 @@ class GameEngine(): #Classe représentant le moteur du jeu
         self.Pseudo = Pseudo
         self.Network_Team = "Blanc"
 
+        self.isIaPlaying = False
+
     ##Fonctions multijoueurs
 
     def Process_Queue(self):
@@ -1623,7 +1645,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
             for i in range(len(self.TableauPions)):
                 if self.TableauPions[i].Couleur == team:
                     self.showPlaceToGo(i, False)
-            return self.ListePionsPossibleToMove
+            return self.ListeCaseChoixPossible
 
 
     def isWin(self):
@@ -1633,28 +1655,58 @@ class GameEngine(): #Classe représentant le moteur du jeu
             return False
             
     def IA_2(self):
+
         print("IA 2 !")
 
         listeInterdit = [0, 2, 4, 6, 8, 11, 13, 15, 17, 19, 20, 22, 24, 26, 28, 31, 33, 35, 37, 39, 40, 42, 44, 46, 48, 51, 53, 55, 57, 59, 60, 62, 64, 66, 68, 71, 73, 75, 77, 79, 80, 82, 84, 86, 88, 91, 93, 95, 97, 99] #Cases ou les pions ne pourront jamais aller
 
         self.selectPion_OnClick(0, 0) #On refresh le tableau de prise obligatoire
 
-        pionCanMove = self.GetMoves("Noir")
+        #On regarde les pions qui peuvent bouger
 
-        print(pionCanMove)
+        self.ListePionsPossibleToMove = []
+        ListPionCanTake = []
+
+        for i in range(len(self.TableauPions)):
+            if self.TableauPions[i].Couleur == "Noir":
+
+                if self.showPlaceToGo(i, False) == True:
+                    ListPionCanTake.append(i)
         
-        pionSelect = random.choice(pionCanMove) 
+        if ListPionCanTake == []:
+            listPionsWhoCanMove = self.ListePionsPossibleToMove
+        else:
+             listPionsWhoCanMove = ListPionCanTake
+       
+        print("Pions qui peuvent bouger : ", listPionsWhoCanMove)
 
-        self.showPlaceToGo(pionSelect, True)
+        #Selection d'un pion de manière aléatoire
+
+        pionSelect = random.choice(listPionsWhoCanMove)
+
+        #On regarde le mouvement que peut faire ce pion
+
+        self.ListeCaseChoixPossible = []
+
+        self.showPlaceToGo(pionSelect, False)
+
+        #On choisit de manière aléatoire une case pour se déplacer
 
         caseSelect = random.choice(self.ListeCaseChoixPossible)
 
-        while self.TableauPions[pionSelect].Couleur != "Noir" and caseSelect not in listeInterdit:
-            pionSelect = random.choice(pionCanMove) 
+        #On bouge le pion en simulant un click
 
-        self.movePion(pionSelect, "IA", caseSelect, False)
 
-        self.Tour(True, False, False)
+        self.isPionSelect = True
+        self.caseIdPionSelect = pionSelect
+        self.pionSelect = pionSelect
+
+        self.isIaPlaying = True
+
+        self.selectPion_OnClick(self.TableauPions[caseSelect].PosX, self.TableauPions[caseSelect].PosY)
+
+        self.isIaPlaying = False
+
 
     def Tour(self, newTurn, isSkip, playIa, fromNetwork = False): #Fonction s'executant à la fin de chaque tour
         
@@ -1702,7 +1754,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
         elif self.teamToPlay == "Blanc" and White_Has_Skip_Turn == True and isSkip == False:
             White_Has_Skip_Turn = False
 
-        if (self.TableauJoueurs[0].isAi == True or self.TableauJoueurs[1].isAi == True) and playIa == True:
+        if (self.TableauJoueurs[0].isAi == True or self.TableauJoueurs[1].isAi == True) and playIa == True and self.isIaPlaying == False:
             self.IA()
 
         if newTurn == True:
@@ -1828,7 +1880,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
     
     def movePion(self, PionSelect, Direction, CaseFinale, switchTurn): #Fonction gérant le déplacement des pions
 
-        global priseMultiple, Rules_PriseMultipleEnable, Button_SkipTour
+        global priseMultiple, Rules_PriseMultipleEnable, Button_SkipTour; IA_Version
 
         self.priseMultiple = False
         pionToMove = PionSelect
@@ -1871,7 +1923,8 @@ class GameEngine(): #Classe représentant le moteur du jeu
             print("Direction inconnue !")
             return
 
-        self.PlaySound("Data/Sounds/Move.wav")
+        if self.isIaPlaying == False:
+            self.PlaySound("Data/Sounds/Move.wav")
 
         self.canvas.focus()
         self.canvas.move(self.canvas.find_closest(self.TableauPions[PionSelect].PosX, self.TableauPions[PionSelect].PosY), self.TableauPions[CaseFinale].PosX - self.TableauPions[PionSelect].PosX, self.TableauPions[CaseFinale].PosY - self.TableauPions[PionSelect].PosY)
@@ -1941,6 +1994,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
             #On regarde si il y a possiblité de prise multiple après une prise
 
             if Rules_PriseMultipleEnable:
+
                 self.priseMultiple = True
                 priseMultiple = self.priseMultiple
                 self.isPionSelect = True
@@ -1950,6 +2004,11 @@ class GameEngine(): #Classe représentant le moteur du jeu
                 if self.showPlaceToGo(CaseFinale, False) == "PionCanBeTake":
                     self.Refresh(False)
                     Button_SkipTour.configure(state = DISABLED)
+
+                    if self.isIaPlaying:
+                        if IA_Version == 2:
+                            self.IA_2()
+
                     return
                 else:
                     Button_SkipTour.configure(state = ACTIVE)
@@ -2224,7 +2283,8 @@ class GameEngine(): #Classe représentant le moteur du jeu
                             if self.TableauPions[caseActuelle].Status == "Null" and nbrPions == 0 and caseActuelle not in listeInterdit:
                                 if drawCircle:
                                     self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauPions[caseActuelle].PosX - 5, self.TableauPions[caseActuelle].PosY - 5, self.TableauPions[caseActuelle].PosX + 5, self.TableauPions[caseActuelle].PosY + 5, fill = Couleur_PionPreview))
-                                self.ListeCaseChoixPossible.append(caseActuelle) 
+                                if pionSelect not in self.ListePionsPossibleToMove:
+                                    self.ListeCaseChoixPossible.append(caseActuelle) 
                         numberToMultiply += 1
 
         #Système de preview des pions normaux
@@ -2236,7 +2296,10 @@ class GameEngine(): #Classe représentant le moteur du jeu
                            if drawCircle:
                                 self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauPions[pionSelect + (i * 2)].PosX - 5, self.TableauPions[pionSelect + (i * 2)].PosY - 5, self.TableauPions[pionSelect + (i * 2)].PosX + 5, self.TableauPions[pionSelect + (i * 2)].PosY + 5, fill= Couleur_PionPreview))
                            self.ListeCaseChoixPossible.append(pionSelect + (i * 2))
-                           self.ListePionsPossibleToMove.append(pionSelect)
+
+                           if pionSelect not in self.ListePionsPossibleToMove:
+                                self.ListePionsPossibleToMove.append(pionSelect)
+
                            canTakePion = True
         
         if self.priseMultiple != True and canTakePion != True and self.TableauPions[pionSelect].Status == "Pion":
@@ -2246,7 +2309,9 @@ class GameEngine(): #Classe représentant le moteur du jeu
                        if drawCircle:
                             self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauPions[pionSelect + (i)].PosX - 5, self.TableauPions[pionSelect + (i)].PosY - 5,  self.TableauPions[pionSelect + (i)].PosX + 5, self.TableauPions[pionSelect + (i)].PosY + 5, fill= Couleur_PionPreview))
                        self.ListeCaseChoixPossible.append(pionSelect + (i))
-                       self.ListePionsPossibleToMove.append(pionSelect)
+
+                       if pionSelect not in self.ListePionsPossibleToMove:
+                           self.ListePionsPossibleToMove.append(pionSelect)
 
         if self.priseMultiple == True and self.ListeCaseChoixPossible != [] and canTakePion == True:
             return "PionCanBeTake"
