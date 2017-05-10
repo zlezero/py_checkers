@@ -66,13 +66,14 @@ TableauPions_Global = None
 
 
 ## -- Toutes les différentes GUI --
+
 class MainMenu(): #Classe représentant le menu principal
     
     def __init__(self, master): #Initialisation de l'interface et de la classe
 
         global Is_Windows
 
-        if sys.platform.startswith('win'):
+        if sys.platform.startswith('win'): #Si on est sur windows
             Is_Windows = True
         else:
             Is_Windows = False
@@ -80,20 +81,23 @@ class MainMenu(): #Classe représentant le menu principal
         self.master = master
         self.Frame = Frame(master)
 
-        Root.title("Jeu de Dames - Menu Principal")
+        Root.title("Jeu de Dames - Menu Principal") #On met à jour le titre
                
-        self.Draw_Interface()
+        self.Draw_Interface() #On dessine l'interface
             
     def Draw_Interface(self): #Fonction dessinant l'interface
 
-        self.Thread_MainMenuSound = Thread(target = self.Play_Music) #Thread laançant la musique en arrière plan (n'est pas encore codé)
+        self.Thread_MainMenuSound = Thread(target = self.Play_Music) #Thread lançant la musique en arrière plan (n'est pas encore codé)
         self.Thread_MainMenuSound.start()
 
-        self.master.geometry("487x341+479+86")
-        self.master.configure(background="#d9d9d9")
+        self.master.geometry("487x341+479+86") #On met la dimension de la fenêtre
+
+        self.master.configure(background="#d9d9d9") #On change la couleur de l'arrière plan
 
         fontTitle = "-family {Segoe UI} -size 19 -weight bold -slant "  \
-            "roman -underline 1 -overstrike 0"
+            "roman -underline 1 -overstrike 0" #On défini les polices
+
+        #On place tous les boutons
 
         self.Frame.place(relx=0.0, rely=0.0, relheight=1.0, relwidth=1.0)
         self.Frame.configure(relief=GROOVE)
@@ -146,7 +150,7 @@ class MainMenu(): #Classe représentant le menu principal
         self.master.withdraw()
 
     def Play_Music(self): #Fonction jouant permettant de lancer la musique
-        print("")
+        print("Lancement de la musique !")
 
     def Show_Window(self): #Fonction permettant de réafficher la fenêtre
         self.master.update()
@@ -187,7 +191,6 @@ class Options(): #Classe représentant le menu des options
 
         self.master = master
         self.Frame = Frame(master)
-        self.style = ttk.Style()
 
         self.IaButton = IntVar()
        
@@ -270,9 +273,10 @@ class Options(): #Classe représentant le menu des options
           'gray93', 'gray94', 'gray95', 'gray97', 'gray98', 'gray99']
 
         self.setChkButton()
+
         self.Draw_Interface()
        
-    def setChkButton(self):
+    def setChkButton(self): #Sauvegarde l'état des boutons
         if Rules_DamesEnable:
             self.ChkDameEnable = 1
         else:
@@ -505,7 +509,9 @@ class Options(): #Classe représentant le menu des options
         self.Button_Save.configure(width=567)
 
         self.setDefaultColor()
+
         self.setIaButton()
+
         self.setRulesButton()
     
     def setDefaultColor(self): #Fonction mettant les couleurs par défaut aux listes déroulantes
@@ -519,7 +525,7 @@ class Options(): #Classe représentant le menu des options
         self.ComboBox_DameNoir.set(Couleur_DameNoirCouleur)
         self.ComboBox_Preview.set(Couleur_PionPreview)
 
-    def setIaButton(self):
+    def setIaButton(self): #On sauvegarde les paramètres de l'IA
 
         global IA_Version
 
@@ -530,7 +536,8 @@ class Options(): #Classe représentant le menu des options
             self.RadioButton_Ia1.deselect()
             self.RadioButton_Ia2.select()
 
-    def setRulesButton(self):
+    def setRulesButton(self): #On fait la même chose avec les boutons des règles
+
         global Rules_DamesEnable, Rules_PriseMultipleEnable, Rules_PriseObligatoireEnable
 
         if Rules_DamesEnable:
@@ -553,7 +560,7 @@ class Options(): #Classe représentant le menu des options
         else:
             self.CheckButton_Timer.deselect()
     
-    def Save(self): #Fonction sauvegardant les couleurs choisies
+    def Save(self): #Fonction sauvegardant les couleurs choisies et les paramètres
 
         global Couleur_DameBlancCouleur, Couleur_DameNoirCouleur, Couleur_DamierNoir, Couleur_PionBlanc, Couleur_PionNoir, Couleur_PionPreview, IA_Version, Rules_DamesEnable, Rules_PriseMultipleEnable, Rules_PriseObligatoireEnable, Rules_Timer
 
@@ -900,7 +907,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
     
     def __init__(self, master, nbrJoueurs): #Initialisation de l'interface et de la classe
 
-        global timeLeft, Label_Joueur2
+        global Label_Joueur2
 
         self.master = master
         self.frame = Frame(master)
@@ -908,6 +915,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.nbrJoueurs = nbrJoueurs
 
         self.can = Canvas(self.frame, width = 500, height = 500, bg = "ivory")
+
         self.can.pack(side = RIGHT, padx = 0, pady =0)
 
         self.master.bind('<Return>', self.Show_Debug)
@@ -1028,6 +1036,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
              if Confirm == True:
              
                 print("Restarting game !") 
+
                 self.Update_Timer()
     
                 if self.nbrJoueurs == 1:
@@ -1042,10 +1051,12 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
             messagebox.showerror("Erreur", "Vous ne pouvez pas redémarrer la partie actuellement !", parent = self.master)
 
     def Skip_Turn(self): #Fonction permettant de sauter son tour en jeu
+
         global priseMultiple, White_Has_Skip_Turn, Black_Has_Skip_Turn
 
         if priseMultiple == False:
             if (self.GEng.teamToPlay == "Noir" and Black_Has_Skip_Turn != True) or (self.GEng.teamToPlay == "Blanc" and White_Has_Skip_Turn != True):
+
                 print("Skipping turn !")
                 
                 if self.GEng.teamToPlay == "Noir":
@@ -1086,11 +1097,11 @@ class Player(): #Classe représentant un joueur
         self.Equipe = Equipe
         self.nbrPions = nbrPions
         self.isAi = isAi
-        self.Pions = ""
 
 class Case(): #Classe représentant une case du damier
     
     def __init__(self, Couleur, PosX, PosY, Status, Equipe):
+
         self.Couleur = Couleur
         self.PosX = PosX
         self.PosY = PosY
@@ -1619,12 +1630,12 @@ class GameEngine(): #Classe représentant le moteur du jeu
             self.IA_2()
 
     def IA_1(self):
+
         print("IA 1 !")
         pionWhoCanMove = []
         
         
         pionToMove = random.choice(pionWhoCanMove)
-
 
         self.movePion(pionToMove, "DiagGaucheBas", pionToMove + 11, False)
             
@@ -1917,8 +1928,6 @@ class GameEngine(): #Classe représentant le moteur du jeu
         elif pionDirection == "DiagGaucheHaut":
             print("Déplacement : Diagonale Gauche Haut")
             numberChange = -11
-        elif pionDirection == "IA":
-            print("Déplacement IA !")
         else:
             print("Direction inconnue !")
             return
