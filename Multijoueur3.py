@@ -1,4 +1,4 @@
-﻿import time, random , wave, os, select, pickle, socket, queue, errno
+import time, random , wave, os, select, pickle, socket, queue, errno
 import urllib.request
 from tkinter import ttk as tkk
 from threading import Thread
@@ -17,7 +17,7 @@ Label_Joueur2 = None
 
 Button_SkipTour = None
 
-timeLeft = 180000
+timeLeft = 300000
 
 #Variables pour la personnalisation
 
@@ -123,7 +123,7 @@ class MainMenu(): #Classe représentant le menu principal
         self.PlayButton1VIA.place(relx=0.24, rely=0.25, height=24, width=257)
         self.PlayButton1VIA.configure(text="Joueur VS IA")
 
-        self.Button_IAVSIA = tkk.Button(self.Frame, command = self.Open_GameWindow1VIA)
+        self.Button_IAVSIA = tkk.Button(self.Frame, command = self.Open_GameWindowIAVIA)
         self.Button_IAVSIA.place(relx=0.24, rely=0.38, height=24, width=257)
         self.Button_IAVSIA.configure(text="IA VS IA")
 
@@ -170,6 +170,12 @@ class MainMenu(): #Classe représentant le menu principal
         self.Hide_Window()
         self.newWindow = Toplevel(self.master)
         self.app = Jeu(self.newWindow, 1)
+        
+    def Open_GameWindowIAVIA(self):
+        Root.title(" Jeu de Dames - Jeu")
+        self.Hide_Window()
+        self.newWindow = Toplevel(self.master)
+        self.app = Jeu(self.newWindow, 0)
     
     def Open_OptionsWindow(self): #Fonction ouvrant la fenêtre des options
         Root.title("Jeu de Dames - Options")
@@ -779,7 +785,7 @@ class Multijoueur():
 
     def Launch_Multiplayer(self):
 
-        global Network_Class, isHost, Pseudo, IsMultiplayer
+        global Network_Class, isHost, Pseudo, IsMultiplayer, Queue_GuiToMultiplayer, keepWaiting
 
         if self.isLaunched != True:
             portEntree = self.Entry_Port.get()
@@ -830,7 +836,15 @@ class Multijoueur():
                     Network_Class = Network(self.Ip, False, self.Port)
                     self.Launch_Client()
         else:
-            messagebox.showerror("Erreur", "Vous avez déjà lancé le multijoueur !")
+            Queue_GuiToMultiplayer.put("StopWaiting!")
+            keepWaiting = False
+            self.isLaunched = False
+            self.Button_Launch.configure(text = "Lancer")
+            self.Checkbutton_Host.configure(state = ACTIVE)
+            self.Entry_Port.configure(state = ACTIVE)
+            self.Entry_Pseudo.configure(state = ACTIVE)
+            
+            
 
 
     def Launch_Host(self):
@@ -861,13 +875,16 @@ class Multijoueur():
 
         global isConnected, keepWaiting
 
-        while isConnected == False or keepWaiting:
+        while isConnected == False:
 
             print("Wait for connection...")
 
-            if isConnected:
+            if isConnected :
                 print("Opening GameWindow...")
                 self.Open_GameWindow()
+                break
+            elif keepWaiting != True:
+                print("Stop waiting !")
                 break
 
     def ResetUi(self):
@@ -933,8 +950,12 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         if self.nbrJoueurs == 1:
             Label_Joueur1.config(text = "-- Joueur 1 (Ia) --")
             self.GEng.StartGame(1, False)
-        else:
+        elif self.nbrJoueurs == 2:
             self.GEng.StartGame(2, False)
+        else:
+            Label_Joueur1.config(text = "-- Joueur 1 (Ia) --")
+            Label_Joueur2.config(text = "-- Joueur 2 (Ia) --")
+            self.GEng.StartGame(0, False)
 
     def Show_Debug(self, event):
 
@@ -1073,7 +1094,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         global timeLeft, Label_Timer, hasGameFinished, Root, Rules_Timer, IsMultiplayer, Timer_After
 
         if hasGameFinished == False and Rules_Timer == True:
-            if (timeLeft <= 0 or timeLeft > 180001) and IsMultiplayer == False:
+            if (timeLeft <= 0 or timeLeft > 300001) and IsMultiplayer == False:
                 self.Skip_Turn()
             timeLeft -= 1000
             Label_Timer.config(text = "Temps restant : {}.{}".format(self.ConvertTime(timeLeft, False), self.ConvertTime(timeLeft, True)))
@@ -1117,15 +1138,6 @@ class Network():
         self.Port = Port
 
         self.isHost = isHost
-
-
-    def Run(self):
-
-        global Queue_MultiplayerToGui
-
-        while True:
-            QueueMultiplayer.put("lol")
-            time.sleep(1)
 
     def Serveur_Init(self):       
             
@@ -1415,10 +1427,21 @@ class Network():
 
                 if msg_split[1] == "Exit":
                     self.Client_SendMessage(b"Disconnected!Exit")
+                    
+                    self.Client_CloseConnection()
+                    
+            elif msg_get.find("StopWaiting!") != -1:
+                
+                print("On arrête d'attendre !")
+                
+                if self.isHost:
+                    self.serveur_lance = False
+                else:
                     self.Client_CloseConnection()
 
             else:            
                 print("Invalid message in Multiplayer queue !")
+                
 
             if isHost:
                 Root.after(100, self.Process_Queue)
@@ -1544,7 +1567,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
 
     def StartGame(self, nombreJoueurs, isRestart): #Fonction se lançant au début de la partie
 
-        global Rules_DamesEnable, Rules_PriseMultipleEnable, Rules_PriseObligatoireEnable, Button_SkipTour, hasGameFinished, timeLeft, Queue_GuiToMultiplayer, Label_Joueur1, Label_Joueur2, Timer_After, Root
+        global Rules_DamesEnable, Rules_PriseMultipleEnable, Rules_PriseObligatoireEnable, Button_SkipTour, hasGameFinished, timeLeft, Queue_GuiToMultiplayer, Label_Joueur1, Label_Joueur2, Timer_After, Root, IA_Version
 
         print("Démarrage / Redémarrage du jeu")
 
@@ -1567,6 +1590,12 @@ class GameEngine(): #Classe représentant le moteur du jeu
         #On génère par défaut les pions et les joueurs
         self.GenerateTableauPion() 
         self.GenerateTableauPlayer(nombreJoueurs)
+        
+        if nombreJoueurs == 0:
+            if IA_Version == 1:
+                self.IA_1()
+            elif IA_Version == 2:
+                self.IA_2()
 
         if self.isMultiplayer:
 
@@ -1632,12 +1661,61 @@ class GameEngine(): #Classe représentant le moteur du jeu
     def IA_1(self):
 
         print("IA 1 !")
-        pionWhoCanMove = []
-        
-        
-        pionToMove = random.choice(pionWhoCanMove)
 
-        self.movePion(pionToMove, "DiagGaucheBas", pionToMove + 11, False)
+        listeInterdit = [0, 2, 4, 6, 8, 11, 13, 15, 17, 19, 20, 22, 24, 26, 28, 31, 33, 35, 37, 39, 40, 42, 44, 46, 48, 51, 53, 55, 57, 59, 60, 62, 64, 66, 68, 71, 73, 75, 77, 79, 80, 82, 84, 86, 88, 91, 93, 95, 97, 99] #Cases ou les pions ne pourront jamais aller
+
+        self.selectPion_OnClick(0, 0) #On refresh le tableau de prise obligatoire
+
+        #On regarde les pions qui peuvent bouger
+
+        self.ListePionsPossibleToMove = []
+        ListPionCanTake = []
+
+        for i in range(len(self.TableauPions)):
+            
+            if self.teamToPlay == "Blanc":
+                pionToGetMove = "Noir"
+            else:
+                pionToGetMove = "Blanc"
+                
+            if self.TableauPions[i].Couleur == pionToGetMove:
+
+                if self.showPlaceToGo(i, False) == True:
+                    ListPionCanTake.append(i)
+        
+        if ListPionCanTake == []:
+            listPionsWhoCanMove = self.ListePionsPossibleToMove
+        else:
+             listPionsWhoCanMove = ListPionCanTake
+       
+        print("Pions qui peuvent bouger : ", listPionsWhoCanMove)
+
+        #Selection d'un pion de manière aléatoire
+
+        pionSelect = random.choice(listPionsWhoCanMove)
+
+        #On regarde le mouvement que peut faire ce pion
+
+        self.ListeCaseChoixPossible = []
+
+        self.showPlaceToGo(pionSelect, False)
+
+        #On choisit de manière aléatoire une case pour se déplacer
+
+        caseSelect = random.choice(self.ListeCaseChoixPossible)
+
+        #On bouge le pion en simulant un click
+
+
+        self.isPionSelect = True
+        self.caseIdPionSelect = pionSelect
+        self.pionSelect = pionSelect
+
+        self.isIaPlaying = True
+
+        self.selectPion_OnClick(self.TableauPions[caseSelect].PosX, self.TableauPions[caseSelect].PosY)
+
+        self.isIaPlaying = False
             
         
     #Fonctions utilitaires pour l'IA 1
@@ -1724,7 +1802,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
         global timeLeft, hasGameFinished, Button_SkipTour, White_Has_Skip_Turn, Black_Has_Skip_Turn, Queue_GuiToMultiplayer, TableauPions_Global
 
         print("Turn function...")
-
+        
         self.hasAlreadyCheckedTake = False
         self.ListePionsPossibleToMove = []
 
@@ -1767,6 +1845,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
 
         if (self.TableauJoueurs[0].isAi == True or self.TableauJoueurs[1].isAi == True) and playIa == True and self.isIaPlaying == False:
             self.IA()
+            
 
         if newTurn == True:
 
@@ -1802,8 +1881,13 @@ class GameEngine(): #Classe représentant le moteur du jeu
             Button_SkipTour.configure(state = ACTIVE)
 
 
-        timeLeft = 180000                   
+        timeLeft = 300000                   
         self.UpdateGui()
+        
+        if playIa == False:
+            self.selectPion_OnClick(0, 0)
+
+        
 
     def Multiplayer_SetNbrPions(self):
 
@@ -1882,11 +1966,14 @@ class GameEngine(): #Classe représentant le moteur du jeu
     def GenerateTableauPlayer(self, numberPlayers):
         nombreJoueurs = numberPlayers
         if nombreJoueurs == 1:
-            self.TableauJoueurs[0] = Player("Joueur 1 (Ia)", 1, 20, False)
-            self.TableauJoueurs[1] = Player("Joueur 2", 2, 20, True)
+            self.TableauJoueurs[0] = Player("Joueur 1 (Ia)", 1, 20, True)
+            self.TableauJoueurs[1] = Player("Joueur 2", 2, 20, False)
         elif nombreJoueurs == 2:
             self.TableauJoueurs[0] = Player("Joueur 1", 1, 20, False)
             self.TableauJoueurs[1] = Player("Joueur 2", 2, 20, False)
+        elif nombreJoueurs == 0:
+            self.TableauJoueurs[0] = Player("Joueur 1 (Ia)", 1, 20, True)
+            self.TableauJoueurs[1] = Player("Joueur 2 (Ia)", 2, 20, True)
     
     
     def movePion(self, PionSelect, Direction, CaseFinale, switchTurn): #Fonction gérant le déplacement des pions
@@ -2017,6 +2104,8 @@ class GameEngine(): #Classe représentant le moteur du jeu
                     if self.isIaPlaying:
                         if IA_Version == 2:
                             self.IA_2()
+                        elif IA_Version == 1:
+                            self.IA_1()
 
                     return
                 else:
@@ -2159,9 +2248,9 @@ class GameEngine(): #Classe représentant le moteur du jeu
                     for i in self.listePionWhoCanTake:
                         print("Create rectangle...")
                         self.RectanglePriseObligatoire = []            
-                        self.RectanglePriseObligatoire.append(self.canvas.create_rectangle(self.roundint(self.TableauPions[i].PosX, 50), self.roundint(self.TableauPions[i].PosY, 50), self.roundint(self.TableauPions[i].PosX, 50) + 50, self.roundint(self.TableauPions[i].PosY, 50) + 50 , outline = "red", width = 3, tags = "rectanglePionObligatoire"))           
+                        self.RectanglePriseObligatoire.append(self.canvas.create_rectangle(self.roundint(self.TableauPions[i].PosX, 50), self.roundint(self.TableauPions[i].PosY, 50), self.roundint(self.TableauPions[i].PosX, 50) + 50, self.roundint(self.TableauPions[i].PosY, 50) + 50 , outline = "red", width = 3, tags = "rectanglePionObligatoire"))     
                     return
-        
+                    
 
         self.pionSelect = 0
         
@@ -2182,6 +2271,9 @@ class GameEngine(): #Classe représentant le moteur du jeu
             self.isPionSelect = False
 
     def checkIfPionCanBeTake(self):
+        
+        global Button_SkipTour
+        
         print("Check pion obligatoire..")
         self.listePionCanTake = []
         self.checkObligatoire = True
@@ -2189,6 +2281,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
             if self.TableauPions[i].Couleur == self.teamToPlay and (self.TableauPions[i].Status == "Pion" or self.TableauPions[i].Status == "Dame"):
                 if self.showPlaceToGo(i, False):
                     self.listePionCanTake.append(i)
+                    Button_SkipTour.configure(state = DISABLED)      
         self.hasAlreadyCheckedTake = True
         self.checkObligatoire = False
         return self.listePionCanTake
@@ -2259,7 +2352,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
             for i in listeCheck: #On regarde chaque diagonale
                 numberToMultiply = -1 #Nombre à multiplier
                 nbrPions = 0
-                while numberToMultiply > -9: #On regarde sur toutes les cases de la diagonale
+                while numberToMultiply > -10: #On regarde sur toutes les cases de la diagonale
                     caseActuelle = pionSelect + (i * (numberToMultiply))
                     if caseActuelle < 100 and caseActuelle > 0:
                         if self.TableauPions[caseActuelle].Status != "Null": #Si l'on rencontre un pion
@@ -2283,7 +2376,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
                 for i in listeCheck:
                     numberToMultiply = 1
                     nbrPions = 0
-                    while numberToMultiply < 9:
+                    while numberToMultiply < 10:
                         caseActuelle = pionSelect + (i * (numberToMultiply))
                         if caseActuelle < 100 and caseActuelle > 0:
                             if self.TableauPions[caseActuelle].Status != "Null":
