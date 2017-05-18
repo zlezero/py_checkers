@@ -14,6 +14,7 @@ Label_TourActuel = None
 Label_Timer = None
 Label_Joueur1 = None
 Label_Joueur2 = None
+Label_nbrTourJoue = None
 
 Button_SkipTour = None
 
@@ -972,7 +973,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
     
     def draw_Interface(self): #Fonction dessinant l'interface principale
         
-        global Label_NbrPionsJ1, Label_NbrPionsJ2, Label_TourActuel, timeLeft, Label_Timer, Label_Joueur1, Label_Joueur2, Button_SkipTour, isHost
+        global Label_NbrPionsJ1, Label_NbrPionsJ2, Label_TourActuel, timeLeft, Label_Timer, Label_Joueur1, Label_Joueur2, Button_SkipTour, isHost, Label_nbrTourJoue
         
         #Stockage du texte
         
@@ -995,6 +996,8 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         Label_TourActuel.pack()
         Label_Timer = Label(self.frame, text = "Temps restant : {}.{}".format(self.ConvertTime(timeLeft, False), self.ConvertTime(timeLeft, True)))
         Label_Timer.pack(pady = 10)
+        Label_nbrTourJoue = Label(self.frame, text = "Nombre de tours joués : 0")
+        Label_nbrTourJoue.pack()
 
         if isHost and IsMultiplayer == True:
             Label_IsHost = Label(self.frame, text = "Host - Equipe noire")
@@ -1497,6 +1500,8 @@ class GameEngine(): #Classe représentant le moteur du jeu
         self.Network_Team = "Blanc"
 
         self.isIaPlaying = False
+        
+        self.nbrToursJoue = 0
 
     ##Fonctions multijoueurs
 
@@ -1575,6 +1580,8 @@ class GameEngine(): #Classe représentant le moteur du jeu
         print("Prise multiple : ", Rules_PriseMultipleEnable)
         print("Prise obligatoire : ", Rules_PriseObligatoireEnable)
         print("Dames : ", Rules_DamesEnable)
+        
+        self.nbrToursJoue = 0
 
         self.teamToPlay = "Blanc" #On force à jouer les blancs en cas de redémarrage
         
@@ -1622,12 +1629,13 @@ class GameEngine(): #Classe représentant le moteur du jeu
 
         print("Mise à jour de l'interface !")
 
-        global Label_NbrPionsJ1, Label_NbrPionsJ2, Label_TourActuel
+        global Label_NbrPionsJ1, Label_NbrPionsJ2, Label_TourActuel, Label_nbrTourJoue
 
         #On met à jour le nombre de pions de chaque équipe ainsi que l'équipe jouant actuellement
         Label_NbrPionsJ1.config(text= "Nombre de pions restants : {}".format(self.TableauJoueurs[0].nbrPions))
         Label_NbrPionsJ2.config(text= "Nombre de pions restants : {}".format(self.TableauJoueurs[1].nbrPions))
         Label_TourActuel.config(text= "Equipe jouant : {}".format(self.teamToPlay))
+        Label_nbrTourJoue.config(text = "Nombre de tours joués : {}".format(self.nbrToursJoue))
         
     def Refresh(self, SwitchTurn, fromNetwork = False): #Fonction permettant de rafraichir le damier avec les nouvelles positions des pions
 
@@ -1865,6 +1873,8 @@ class GameEngine(): #Classe représentant le moteur du jeu
             else:
                 self.teamToPlay = "Blanc"
                 self.isFirstTurn = False
+                
+            self.nbrToursJoue += 1
 
 
         if (self.teamToPlay == "Noir" and Black_Has_Skip_Turn) or (self.teamToPlay == "Blanc" and White_Has_Skip_Turn) or (self.teamToPlay != self.Network_Team) or (hasGameFinished == True):
@@ -1925,6 +1935,8 @@ class GameEngine(): #Classe représentant le moteur du jeu
                 nbrDames_Noires += 1
 
         if (nbrDames_Blanches == 2 and nbrDames_Noires == 1 and self.TableauJoueurs[1].nbrPions == 2 and self.TableauJoueurs[0].nbrPions == 1) or (nbrDames_Blanches == 1 and nbrDames_Noires == 2 and self.TableauJoueurs[1].nbrPions == 1 and self.TableauJoueurs[0].nbrPions == 2) or (nbrDames_Blanches == 1 and nbrDames_Noires == 1 and self.TableauJoueurs[0].nbrPions == 1 and self.TableauJoueurs[1].nbrPions == 1):
+            return True
+        elif (self.nbrToursJoue > 100 and self.NombreCoupsSansPrise >= 25):
             return True
 
         return False
@@ -2313,8 +2325,10 @@ class GameEngine(): #Classe représentant le moteur du jeu
         return 99 #Si l'on ne trouve aucun pion
 
     def deleteMoveGraphObject(self): #Fonction qui permet de supprimer les éléments graphiques relatifs à la selection d'un pion
+    
         self.delete("rectangleSelectPion")
         self.delete("rectanglePionObligatoire")
+        
         for i in range(len(self.CercleChoixPossible)):
             self.canvas.delete(self.CercleChoixPossible[i])
         for i in range(len(self.RectanglePriseObligatoire)):
@@ -2373,6 +2387,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
                         self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauPions[i].PosX - 5, self.TableauPions[i].PosY - 5, self.TableauPions[i].PosX + 5, self.TableauPions[i].PosY + 5, fill = Couleur_PionPreview))
                     self.ListeCaseChoixPossible.append(i) 
             else:
+                
                 for i in listeCheck:
                     numberToMultiply = 1
                     nbrPions = 0
@@ -2394,7 +2409,9 @@ class GameEngine(): #Classe représentant le moteur du jeu
         if self.TableauPions[pionSelect].Status == "Pion":
             for i in listeCheck: #On regarde si on peux manger un pion
                    if pionSelect + (i * 2) < 100 and pionSelect + (i * 2) > 0:
+                       
                         if (self.TableauPions[pionSelect + (i)].Status == "Pion" or self.TableauPions[pionSelect + (i)].Status == "Dame") and self.TableauPions[pionSelect + (i * 2)].Status == "Null" and self.TableauPions[pionSelect + (i)].Equipe != self.TableauPions[pionSelect].Equipe and pionSelect + (i) not in listeInterdit and pionSelect + (i * 2) not in listeInterdit:   
+                        
                            if drawCircle:
                                 self.CercleChoixPossible.append(self.canvas.create_oval(self.TableauPions[pionSelect + (i * 2)].PosX - 5, self.TableauPions[pionSelect + (i * 2)].PosY - 5, self.TableauPions[pionSelect + (i * 2)].PosX + 5, self.TableauPions[pionSelect + (i * 2)].PosY + 5, fill= Couleur_PionPreview))
                            self.ListeCaseChoixPossible.append(pionSelect + (i * 2))
