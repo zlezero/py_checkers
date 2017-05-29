@@ -1,10 +1,11 @@
-import time, random , wave, os, select, pickle, socket, queue, errno
+﻿import time, random , wave, os, select, pickle, socket, queue, errno
 import urllib.request
 from tkinter import ttk as tkk
 from threading import Thread
 from tkinter import messagebox
 from tkinter import *
 from copy import deepcopy
+from tkinter import filedialog
 
 ##Variables de l'interface graphique et de jeu
 
@@ -17,6 +18,9 @@ Label_Joueur2 = None
 Label_nbrTourJoue = None
 
 Button_SkipTour = None
+
+Button_LoadConfig = None
+Button_SaveConfig = None
 
 timeLeft = 300000
 
@@ -789,6 +793,7 @@ class Multijoueur():
         global Network_Class, isHost, Pseudo, IsMultiplayer, Queue_GuiToMultiplayer, keepWaiting
 
         if self.isLaunched != True:
+
             portEntree = self.Entry_Port.get()
         
             if self.Entry_Ip.get() == "" and self.isHost == False:
@@ -925,7 +930,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
     
     def __init__(self, master, nbrJoueurs): #Initialisation de l'interface et de la classe
 
-        global Label_Joueur2
+        global Label_Joueur2 
 
         self.master = master
         self.frame = Frame(master)
@@ -942,7 +947,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
 
         self.draw_Interface()
 
-        self.GEng = GameEngine(self.can, self.master)
+        self.GEng = GameEngine(self.can, self.master) #On initialise le moteur de jeu
         
         self.frame.pack()
 
@@ -973,7 +978,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
     
     def draw_Interface(self): #Fonction dessinant l'interface principale
         
-        global Label_NbrPionsJ1, Label_NbrPionsJ2, Label_TourActuel, timeLeft, Label_Timer, Label_Joueur1, Label_Joueur2, Button_SkipTour, isHost, Label_nbrTourJoue
+        global Label_NbrPionsJ1, Label_NbrPionsJ2, Label_TourActuel, timeLeft, Label_Timer, Label_Joueur1, Label_Joueur2, Button_SkipTour, isHost, Label_nbrTourJoue, Button_LoadConfig, Button_SaveConfig
         
         #Stockage du texte
         
@@ -1001,19 +1006,79 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
 
         if isHost and IsMultiplayer == True:
             Label_IsHost = Label(self.frame, text = "Host - Equipe noire")
-            Label_IsHost.pack()
+            Label_IsHost.pack(pady = 5)
         elif IsMultiplayer == True:
             Label_IsHost = Label(self.frame, text = "Client - Equipe blanche")
-            Label_IsHost.pack()
+            Label_IsHost.pack(pady = 5)
             
         #-- Affichage des boutons
+        
         self.Button_ReturnToMenu = tkk.Button(self.frame, text = "Retourner au menu", command = self.Confirm_Exit)
         self.Button_ReturnToMenu.pack(side = BOTTOM, pady =3)
         self.Button_Restart = tkk.Button(self.frame, text='Redémarrer', command = self.Restart_Game)
         self.Button_Restart.pack(side = BOTTOM, padx =3, pady =3)
         Button_SkipTour = tkk.Button(self.frame, text='Passer le tour', command = self.Skip_Turn)
         Button_SkipTour.pack(side = BOTTOM, padx =5, pady =5)
-        
+        Button_LoadConfig = tkk.Button(self.frame, text = "Charger une partie", command = self.Load_Config)
+        Button_LoadConfig.pack(side = BOTTOM, pady = 3)
+        Button_SaveConfig = tkk.Button(self.frame, text = "Sauvegarder une partie", command = self.Save_Config)
+        Button_SaveConfig.pack(side = BOTTOM, pady = 3)
+       
+    def Load_Config(self):
+
+        print("Loading configuration...")
+
+        FileName = filedialog.askopenfilename(parent = self.master)
+
+        if FileName != "":
+
+            print("Loading file...")
+
+            ObjectToLoad = []
+
+            try:
+                
+                TableauPionBackup = self.GEng.TableauPions
+
+                with open(FileName, "rb") as f:
+
+                    ObjectToLoad = pickle.load(f)
+
+                self.GEng.TableauPions = ObjectToLoad[0]
+
+                self.GEng.teamToPlay = ObjectToLoad[1]
+
+                self.GEng.nbrToursJoue = ObjectToLoad[2]
+
+            except:
+                
+                self.GEng.TableauPions = TableauPionBackup
+
+                messagebox.showerror("Erreur", "Une erreur est survenue lors du chargement du fichier de configuration !", parent = self.master)
+
+            self.GEng.Multiplayer_SetNbrPions()
+
+            self.GEng.Refresh(False, False)
+
+    def Save_Config(self):
+
+        print("Saving configuration...")
+
+        FileNameToSave = filedialog.asksaveasfilename(parent = self.master)
+
+        ObjectToSave = [self.GEng.TableauPions, self.GEng.teamToPlay, self.GEng.nbrToursJoue]
+
+        if FileNameToSave != "":
+
+            with open(FileNameToSave, "wb") as f:
+
+                pickle.dump(ObjectToSave, f)
+
+        else:
+
+            messagebox.showerror("Erreur", "Nom de fichier invalide !", parent = self.master)
+
+
     def Confirm_Exit(self):
 
         global Queue_GuiToMultiplayer, IsMultiplayer
@@ -1572,7 +1637,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
 
     def StartGame(self, nombreJoueurs, isRestart): #Fonction se lançant au début de la partie
 
-        global Rules_DamesEnable, Rules_PriseMultipleEnable, Rules_PriseObligatoireEnable, Button_SkipTour, hasGameFinished, timeLeft, Queue_GuiToMultiplayer, Label_Joueur1, Label_Joueur2, Timer_After, Root, IA_Version
+        global Rules_DamesEnable, Rules_PriseMultipleEnable, Rules_PriseObligatoireEnable, Button_SkipTour, hasGameFinished, timeLeft, Queue_GuiToMultiplayer, Label_Joueur1, Label_Joueur2, Timer_After, Root, IA_Version, Button_LoadConfig, Button_SaveConfig
 
         print("Démarrage / Redémarrage du jeu")
 
@@ -1606,6 +1671,9 @@ class GameEngine(): #Classe représentant le moteur du jeu
 
         if self.isMultiplayer:
 
+            Button_LoadConfig.configure(state = DISABLED)
+            Button_SaveConfig.configure(state = DISABLED)
+
             Rules_DamesEnable = True
             Rules_PriseMultipleEnable = True
             Rules_PriseObligatoireEnable = True
@@ -1621,6 +1689,11 @@ class GameEngine(): #Classe représentant le moteur du jeu
 
             self.Process_Queue()
             self.master.after(100, self.Process_Queue)
+
+        else:
+
+            Button_LoadConfig.configure(state = ACTIVE)
+            Button_SaveConfig.configure(state = ACTIVE)
 
         #On met à jour l'ensemble
         self.Refresh(False)
@@ -1728,14 +1801,6 @@ class GameEngine(): #Classe représentant le moteur du jeu
         
     #Fonctions utilitaires pour l'IA 1
 
-    def maxMinBoard(self, currentDepth, bestMove):
-        best_move = bestMove
-        best_board = None
-
-        if best_move == float("-inf"):
-            moves = ""
-
-
     def GetMoves(self, team):
         if team == "Blanc" or team == "Noir":
             pionWhoCanMove = []
@@ -1744,12 +1809,6 @@ class GameEngine(): #Classe représentant le moteur du jeu
                     self.showPlaceToGo(i, False)
             return self.ListeCaseChoixPossible
 
-
-    def isWin(self):
-        if self.TableauJoueurs[0].nbrPions == 0 or self.TableauJoueurs[1].nbrPions == 0:
-            return True
-        else:
-            return False
             
     def IA_2(self):
 
@@ -1807,7 +1866,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
 
     def Tour(self, newTurn, isSkip, playIa, fromNetwork = False): #Fonction s'executant à la fin de chaque tour
         
-        global timeLeft, hasGameFinished, Button_SkipTour, White_Has_Skip_Turn, Black_Has_Skip_Turn, Queue_GuiToMultiplayer, TableauPions_Global
+        global timeLeft, hasGameFinished, Button_SkipTour, White_Has_Skip_Turn, Black_Has_Skip_Turn, Queue_GuiToMultiplayer, TableauPions_Global, Button_LoadConfig, Button_SaveConfig
 
         print("Turn function...")
         
@@ -1824,6 +1883,9 @@ class GameEngine(): #Classe représentant le moteur du jeu
             hasGameFinished = True
 
             Button_SkipTour.configure(state = DISABLED)
+
+            Button_LoadConfig.configure(state = DISABLED)
+            Button_SaveConfig.configure(state = DISABLED)
 
             if self.TableauJoueurs[0].nbrPions == 0:
 
@@ -1894,7 +1956,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
         timeLeft = 300000                   
         self.UpdateGui()
         
-        if playIa == False:
+        if self.isIaPlaying == False:
             self.selectPion_OnClick(0, 0)
 
         
