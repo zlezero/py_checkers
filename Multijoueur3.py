@@ -1887,6 +1887,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
             Button_LoadConfig.configure(state = DISABLED)
             Button_SaveConfig.configure(state = DISABLED)
 
+
             if self.TableauJoueurs[0].nbrPions == 0:
 
                 if self.isMultiplayer:
