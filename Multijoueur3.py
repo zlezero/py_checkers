@@ -1,4 +1,5 @@
-﻿import time, random , wave, os, select, pickle, socket, queue, errno
+﻿
+import time, random , wave, os, select, pickle, socket, queue, errno
 import urllib.request
 from tkinter import ttk as tkk
 from threading import Thread
@@ -1400,9 +1401,15 @@ class Network():
 
                 if self.msg_recu_decode.find("SwitchTurnAndGetArray!") != -1:
 
+                    print("Get message to switch array !")
+
                     msg_justByte = self.msg_recu[22:]
 
+                    print("Tableau découpé !")
+                    
                     TableauPions_Global = pickle.loads(msg_justByte)
+
+                    print("Pickle loads !")
 
                     Queue_MultiplayerToGui.put("SetNewArrayAndSwitchTurn!")
 
@@ -1418,9 +1425,14 @@ class Network():
 
                 time.sleep(0.1)
 
+        except EOFError:
+
+            Queue_MultiplayerToGui.put("SetNewArrayAndSwitchTurn!")
+
         except:
 
             Queue_MultiplayerToGui.put("Disconnected!Error")
+
             self.Client_CloseConnection()
             return
 
