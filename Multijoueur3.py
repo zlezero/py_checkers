@@ -1,4 +1,4 @@
-﻿
+
 import time, random , wave, os, select, pickle, socket, queue, errno
 import urllib.request
 from tkinter import ttk as tkk
@@ -33,6 +33,8 @@ Couleur_DamierNoir = "black"
 Couleur_DameBlancCouleur = "ivory"
 Couleur_DameNoirCouleur = "red2"
 Couleur_PionPreview = "yellow"
+
+#Variables pour les règles et le jeu
 
 priseMultiple = False
 hasGameFinished = False
@@ -71,7 +73,7 @@ Queue_GuiToMultiplayer = queue.Queue()
 TableauPions_Global = None
 
 
-## -- Toutes les différentes GUI --
+## -- Toutes les différentes interfaces --
 
 class MainMenu(): #Classe représentant le menu principal
     
@@ -623,7 +625,7 @@ class Options(): #Classe représentant le menu des options
         self.ComboBox_PionNoir.set(random.choice(self.Colors))
         self.ComboBox_Preview.set(random.choice(self.Colors))
 
-    def CheckButtonDame_Tick(self):
+    def CheckButtonDame_Tick(self): 
         if self.ChkDameEnable == 1:
             self.ChkDameEnable = 0
         else:
@@ -666,7 +668,7 @@ class Options(): #Classe représentant le menu des options
 
 
 
-class Multijoueur():
+class Multijoueur(): #Classe pour l'interface du multijoueur
 
     def __init__(self, master):
         self.master = master
@@ -737,7 +739,7 @@ class Multijoueur():
         self.Label_MyIp.configure(background="#d9d9d9")
         self.Label_MyIp.configure(foreground="#000000")
         self.Label_MyIp.configure(relief=FLAT)
-        self.Label_MyIp.configure(text="Mon adresse IP : " + self.get_locale_ip() + " (locale) / " + self.get_extern_ip() + " (externe)")
+        self.Label_MyIp.configure(text="Mon adresse IP : " + self.get_locale_ip() + " (locale)")
 
         self.Labelframe_ConfigPlayer = LabelFrame(self.master)
         self.Labelframe_ConfigPlayer.place(relx=0.56, rely=0.0, relheight=0.46, relwidth=0.41)
@@ -767,11 +769,11 @@ class Multijoueur():
         self.Button_Return.place(relx=0.56, rely=0.75, height=25, width=196)
         self.Button_Return.configure(text="Retourner au menu")
 
-    def get_locale_ip(self):
+    def get_locale_ip(self): #On obtient l'addresse ip locale
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        
         try:
-            # doesn't even have to be reachable
             s.connect(('8.8.8.8', 1))
             IP = s.getsockname()[0]
         except:
@@ -780,16 +782,7 @@ class Multijoueur():
             s.close()
         return IP
 
-    def get_extern_ip(self):
-
-        try:
-            external_ip = urllib.request.urlopen('http://ident.me').read().decode('utf8')
-        except:
-            external_ip = "Ip non disponible"
-        finally:
-            return external_ip
-
-    def Launch_Multiplayer(self):
+    def Launch_Multiplayer(self): #Fonction lançant le multijoueur
 
         global Network_Class, isHost, Pseudo, IsMultiplayer, Queue_GuiToMultiplayer, keepWaiting
 
@@ -854,7 +847,7 @@ class Multijoueur():
             
 
 
-    def Launch_Host(self):
+    def Launch_Host(self): #On lance la partie serveur
 
         global Network_Class
 
@@ -866,7 +859,7 @@ class Multijoueur():
         self.WaitThread = Thread(target = self.WaitForConnection)
         self.WaitThread.start()
 
-    def Launch_Client(self):
+    def Launch_Client(self): #On lance la partie client
 
         global Network_Class
 
@@ -878,7 +871,7 @@ class Multijoueur():
         self.WaitThread = Thread(target = self.WaitForConnection)
         self.WaitThread.start()
 
-    def WaitForConnection(self):
+    def WaitForConnection(self): #On attend une connexion dans les 2 cas
 
         global isConnected, keepWaiting
 
@@ -894,11 +887,11 @@ class Multijoueur():
                 print("Stop waiting !")
                 break
 
-    def ResetUi(self):
+    def ResetUi(self): #On remet à 0 l'interfece
             
         self.Checkbutton_Host.deselect()
     
-    def CheckBoxHost_Tick(self):
+    def CheckBoxHost_Tick(self): #On s'occupe de l'interface lorsque on coche ou décoche
         if self.isHost == 0:
             self.isHost = 1
         else:
@@ -964,7 +957,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
             Label_Joueur2.config(text = "-- Joueur 2 (Ia) --")
             self.GEng.StartGame(0, False)
 
-    def Show_Debug(self, event):
+    def Show_Debug(self, event): 
 
         global Is_Windows
 
@@ -1025,7 +1018,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         Button_SaveConfig = tkk.Button(self.frame, text = "Sauvegarder une partie", command = self.Save_Config)
         Button_SaveConfig.pack(side = BOTTOM, pady = 3)
        
-    def Load_Config(self):
+    def Load_Config(self): #On charge la partie
 
         print("Loading configuration...")
 
@@ -1061,7 +1054,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
 
             self.GEng.Refresh(False, False)
 
-    def Save_Config(self):
+    def Save_Config(self): #On sauvegarde la partie
 
         print("Saving configuration...")
 
@@ -1080,7 +1073,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
             messagebox.showerror("Erreur", "Nom de fichier invalide !", parent = self.master)
 
 
-    def Confirm_Exit(self):
+    def Confirm_Exit(self): #On demande une confirmation au joueur pour quitter
 
         global Queue_GuiToMultiplayer, IsMultiplayer
 
@@ -1171,7 +1164,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         Timer_After = Root.after(1000, self.Update_Timer)
         
     
-    def ConvertTime(self, timeLeft, toSeconds):
+    def ConvertTime(self, timeLeft, toSeconds): #On convertit le temps
         if toSeconds == True:
             return int((timeLeft/1000)%60)
         else:
@@ -1208,7 +1201,7 @@ class Network():
 
         self.isHost = isHost
 
-    def Serveur_Init(self):       
+    def Serveur_Init(self): #On initialise le serveur
             
         global Root, Queue_MultiplayerToGui
 
@@ -1236,7 +1229,7 @@ class Network():
             self.Serveur_StopServer()
             return
 
-    def Serveur_WaitMessage(self):
+    def Serveur_WaitMessage(self): #On attend un message du client
 
         global isConnected, Queue_MultiplayerToGui, TableauPions_Global, Pseudo
 
@@ -1307,7 +1300,7 @@ class Network():
             self.Serveur_StopServer()
             return
 
-    def Serveur_SendMessage(self, messageToSend):
+    def Serveur_SendMessage(self, messageToSend): #On envoit un message au client
 
         global Queue_MultiplayerToGui
 
@@ -1322,7 +1315,7 @@ class Network():
             Queue_MultiplayerToGui.put("Disconnected!Error")
             self.Serveur_StopServer()
 
-    def Serveur_StopServer(self):
+    def Serveur_StopServer(self): #On arrête le serveur
 
         try:
 
@@ -1336,7 +1329,7 @@ class Network():
             print("Error while closing connection to client !")
             return
 
-    def Client_Init(self):
+    def Client_Init(self): #On initialise le client
 
         global isConnected, Root, Queue_MultiplayerToGui
 
@@ -1362,18 +1355,20 @@ class Network():
             self.Client_CloseConnection()
             return
 
-    def Client_SendMessage(self, MessageToSend):
+    def Client_SendMessage(self, MessageToSend): #On envoit un message au serveur
 
         global Queue_MultiplayerToGui
 
         try:
 
             print("Sending message...")
-
+            
             self.msg_a_envoyer = MessageToSend
+            
 
             # On envoie le message
             self.connexion_avec_serveur.send(self.msg_a_envoyer)
+            
         except:
 
             Queue_MultiplayerToGui.put("Disconnected!Error")
@@ -1381,7 +1376,7 @@ class Network():
             return
 
 
-    def Client_WaitForServerResponse(self):
+    def Client_WaitForServerResponse(self): #On attend la réponse du serveur
 
         global Queue_MultiplayerToGui, TableauPions_Global
 
@@ -1407,7 +1402,9 @@ class Network():
 
                     print("Tableau découpé !")
                     
-                    TableauPions_Global = pickle.loads(msg_justByte)
+                    with open(msg_justByte, "rb") as f:
+                    
+                        TableauPions_Global = pickle.loads(f)
 
                     print("Pickle loads !")
 
@@ -1437,7 +1434,7 @@ class Network():
             return
 
 
-    def Client_CloseConnection(self):
+    def Client_CloseConnection(self): #On ferme la connexion au serveur
 
         try:
 
@@ -1450,7 +1447,7 @@ class Network():
             print("Error while closing connection to server !")
             return
 
-    def Process_Queue(self):
+    def Process_Queue(self): #On regarde les messages dans la queue
 
         global Queue_GuiToMultiplayer, Root, TableauPions_Global, isHost
 
@@ -1582,7 +1579,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
 
     ##Fonctions multijoueurs
 
-    def Process_Queue(self):
+    def Process_Queue(self): #On regarde les messages dans la queue
 
         global Queue_MultiplayerToGui, Label_Joueur1, Label_Joueur2
 
