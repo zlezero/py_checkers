@@ -139,16 +139,20 @@ class MainMenu(): #Classe représentant le menu principal
         self.Button_Multiplayer.place(relx=0.24, rely=0.51, height=24, width=257)
         self.Button_Multiplayer.configure(text = "Multijoueur")
 
+        self.Button_Creator = tkk.Button(self.Frame, command = self.Open_CreatorWindow)
+        self.Button_Creator.place(relx = 0.24, rely = 0.64, height = 24, width = 257)
+        self.Button_Creator.configure(text = "Créer une situation")
+
         self.OptionsButton = tkk.Button(self.Frame, command = self.Open_OptionsWindow)
-        self.OptionsButton.place(relx=0.24, rely=0.64, height=24, width=257)
+        self.OptionsButton.place(relx=0.24, rely=0.77, height=24, width=257)
         self.OptionsButton.configure(text="Options")
 
         self.Button_Rules = tkk.Button(self.Frame, command = self.ShowRules)
-        self.Button_Rules.place(relx=0.24, rely=0.77, height=24, width=257)
+        self.Button_Rules.place(relx=0.24, rely=0.89, height=24, width=257)
         self.Button_Rules.configure(text="Règles")
 
         self.quitButton = tkk.Button(self.Frame, command = self.Close_Window)
-        self.quitButton.place(relx=0.24, rely=0.89, height=24, width=257)
+        self.quitButton.place(relx=0.24, rely=0.90, height=24, width=257)
         self.quitButton.configure(text="Quitter")
 
     def ShowRules(self):
@@ -196,6 +200,12 @@ class MainMenu(): #Classe représentant le menu principal
         self.Hide_Window()
         self.newWindow = Toplevel(self.master)
         self.app = Multijoueur(self.newWindow)
+
+    def Open_CreatorWindow(self):
+        Root.title("Jeu de Dames - Createur")
+        self.Hide_Window()
+        self.newWindow = Toplevel(self.master)
+        self.app = Jeu(self.newWindow, -1)
 
 class Options(): #Classe représentant le menu des options
     
@@ -952,6 +962,10 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
             self.GEng.StartGame(1, False)
         elif self.nbrJoueurs == 2:
             self.GEng.StartGame(2, False)
+        elif self.nbrJoueurs == -1:
+            print("Launching creator !")
+            self.can.bind('<Button-3>', self.Creator_RightClick)
+            self.GEng.StartCreator()
         else:
             Label_Joueur1.config(text = "-- Joueur 1 (Ia) --")
             Label_Joueur2.config(text = "-- Joueur 2 (Ia) --")
@@ -974,50 +988,111 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         
         global Label_NbrPionsJ1, Label_NbrPionsJ2, Label_TourActuel, timeLeft, Label_Timer, Label_Joueur1, Label_Joueur2, Button_SkipTour, isHost, Label_nbrTourJoue, Button_LoadConfig, Button_SaveConfig
         
+        
         #Stockage du texte
         
         self.nbrPionsRestantsJ1_Text = "Nombre de pions restants : 20"
         self.nbrPionsRestantsJ2_Text = "Nombre de pions restants : 20"
         self.tourActuel = "Equipe jouant : Blanc"
         
-        # -- Affichage du texte --
-        Label_Joueur1 = Label(self.frame, text = "-- Joueur 1 --")
-        Label_Joueur1.pack()
-        Label_NbrPionsJ1 = Label(self.frame, text = self.nbrPionsRestantsJ1_Text)
-        Label_NbrPionsJ1.pack()
-        Label_Joueur2 = Label(self.frame, text = "-- Joueur 2 --")
-        Label_Joueur2.pack()
-        Label_NbrPionsJ2 = Label(self.frame, text = self.nbrPionsRestantsJ2_Text)
-        Label_NbrPionsJ2.pack()
-        self.Label_Separation = Label(self.frame, text = "-------------------")
-        self.Label_Separation.pack()
-        Label_TourActuel = Label(self.frame, text = self.tourActuel)
-        Label_TourActuel.pack()
-        Label_Timer = Label(self.frame, text = "Temps restant : {}.{}".format(self.ConvertTime(timeLeft, False), self.ConvertTime(timeLeft, True)))
-        Label_Timer.pack(pady = 10)
-        Label_nbrTourJoue = Label(self.frame, text = "Nombre de tours joués : 0")
-        Label_nbrTourJoue.pack()
+        if self.nbrJoueurs != -1:
 
-        if isHost and IsMultiplayer == True:
-            Label_IsHost = Label(self.frame, text = "Host - Equipe noire")
-            Label_IsHost.pack(pady = 5)
-        elif IsMultiplayer == True:
-            Label_IsHost = Label(self.frame, text = "Client - Equipe blanche")
-            Label_IsHost.pack(pady = 5)
+            # -- Affichage du texte --
+            Label_Joueur1 = Label(self.frame, text = "-- Joueur 1 --")
+            Label_Joueur1.pack()
+            Label_NbrPionsJ1 = Label(self.frame, text = self.nbrPionsRestantsJ1_Text)
+            Label_NbrPionsJ1.pack()
+            Label_Joueur2 = Label(self.frame, text = "-- Joueur 2 --")
+            Label_Joueur2.pack()
+            Label_NbrPionsJ2 = Label(self.frame, text = self.nbrPionsRestantsJ2_Text)
+            Label_NbrPionsJ2.pack()
+            self.Label_Separation = Label(self.frame, text = "-------------------")
+            self.Label_Separation.pack()
+            Label_TourActuel = Label(self.frame, text = self.tourActuel)
+            Label_TourActuel.pack()
+            Label_Timer = Label(self.frame, text = "Temps restant : {}.{}".format(self.ConvertTime(timeLeft, False), self.ConvertTime(timeLeft, True)))
+            Label_Timer.pack(pady = 10)
+            Label_nbrTourJoue = Label(self.frame, text = "Nombre de tours joués : 0")
+            Label_nbrTourJoue.pack()
+
+            if isHost and IsMultiplayer == True:
+                Label_IsHost = Label(self.frame, text = "Host - Equipe noire")
+                Label_IsHost.pack(pady = 5)
+            elif IsMultiplayer == True:
+                Label_IsHost = Label(self.frame, text = "Client - Equipe blanche")
+                Label_IsHost.pack(pady = 5)
             
-        #-- Affichage des boutons
+            #-- Affichage des boutons
         
+            
+            self.Button_Restart = tkk.Button(self.frame, text='Redémarrer', command = self.Restart_Game)
+            self.Button_Restart.pack(side = BOTTOM, padx =3, pady =3)
+            Button_SkipTour = tkk.Button(self.frame, text='Passer le tour', command = self.Skip_Turn)
+            Button_SkipTour.pack(side = BOTTOM, padx =5, pady =5)
+            
+            Texte_LoadConfigButton = "Charger une partie"
+            Texte_SaveConfigButton = "Sauvegarder une partie"
+
+        else:
+
+            self.Label_CreatorTitle = Label(self.frame, text = "-- Créateur de situations --")
+            self.Label_CreatorTitle.pack()
+            self.Label_Commandes1 = Label(self.frame, text = "Click gauche : Placer / Retirer un pion")
+            self.Label_Commandes1.pack()
+            self.Label_Commandes2 = Label(self.frame, text = "Click droit : Changer le type d'un pion")
+            self.Label_Commandes2.pack()
+            self.Label_Configuration = Label(self.frame, text = "-- Configuration actuelle --")
+            self.Label_Configuration.pack()
+            self.Label_PlayerWhoPlayFirst = Label(self.frame, text = "Joueur qui commence : Blanc")
+            self.Label_PlayerWhoPlayFirst.pack()
+
+            self.Button_ChangePlayerStart = tkk.Button(self.frame, text = "Changer le joueur qui commence", command = self.Createur_ChangePlayerWhoStart)
+            self.Button_ChangePlayerStart.pack(pady = 3)
+
+            Texte_LoadConfigButton = "Charger une situation"
+            Texte_SaveConfigButton = "Sauvegarder une situation"
+
         self.Button_ReturnToMenu = tkk.Button(self.frame, text = "Retourner au menu", command = self.Confirm_Exit)
         self.Button_ReturnToMenu.pack(side = BOTTOM, pady =3)
-        self.Button_Restart = tkk.Button(self.frame, text='Redémarrer', command = self.Restart_Game)
-        self.Button_Restart.pack(side = BOTTOM, padx =3, pady =3)
-        Button_SkipTour = tkk.Button(self.frame, text='Passer le tour', command = self.Skip_Turn)
-        Button_SkipTour.pack(side = BOTTOM, padx =5, pady =5)
-        Button_LoadConfig = tkk.Button(self.frame, text = "Charger une partie", command = self.Load_Config)
+
+        Button_LoadConfig = tkk.Button(self.frame, text = Texte_LoadConfigButton, command = self.Load_Config)
         Button_LoadConfig.pack(side = BOTTOM, pady = 3)
-        Button_SaveConfig = tkk.Button(self.frame, text = "Sauvegarder une partie", command = self.Save_Config)
+        Button_SaveConfig = tkk.Button(self.frame, text = Texte_SaveConfigButton, command = self.Save_Config)
         Button_SaveConfig.pack(side = BOTTOM, pady = 3)
-       
+
+        if self.nbrJoueurs == -1:
+            self.Button_TestSituation = tkk.Button(self.frame, text = "Tester la situation", command = self.Createur_TestSituation)
+            self.Button_TestSituation.pack(side = BOTTOM, pady =3)
+    
+    def Createur_TestSituation(self):
+        
+        print("Launching test")
+
+        tableauPion = self.GEng.TableauPions
+        teamToPlay = self.GEng.teamToPlay
+
+        self.GEng.StartGame(2, False)
+        self.GEng.teamToPlay = teamToPlay
+        self.GEng.TableauPions = tableauPion
+        self.GEng.Refresh(False)
+        
+
+    def Createur_ChangePlayerWhoStart(self):
+
+        if self.GEng.teamToPlay == "Noir":
+            self.GEng.teamToPlay = "Blanc"
+            self.Label_PlayerWhoPlayFirst.configure(text = "Joueur qui commence : Blanc")
+        else:
+            self.GEng.teamToPlay = "Noir"
+            self.Label_PlayerWhoPlayFirst.configure(text = "Joueur qui commence : Noir")
+
+    def Createur_ReloadUI(self):
+
+        if self.GEng.teamToPlay == "Noir":
+            self.Label_PlayerWhoPlayFirst.configure(text = "Joueur qui commence : Noir")
+        else:
+            self.Label_PlayerWhoPlayFirst.configure(text = "Joueur qui commence : Blanc")
+      
     def Load_Config(self): #On charge la partie
 
         print("Loading configuration...")
@@ -1052,6 +1127,9 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
 
             self.GEng.Multiplayer_SetNbrPions()
 
+            if self.nbrJoueurs == -1:
+                self.Createur_ReloadUI()
+
             self.GEng.Refresh(False, False)
 
     def Save_Config(self): #On sauvegarde la partie
@@ -1067,9 +1145,7 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
             with open(FileNameToSave, "wb") as f:
 
                 pickle.dump(ObjectToSave, f)
-
         else:
-
             messagebox.showerror("Erreur", "Nom de fichier invalide !", parent = self.master)
 
 
@@ -1105,8 +1181,18 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.app = MainMenu(self.newWindow)
 
     def mouse_down(self, event): #Fonction s'activant en cas de clic de souris sur l'interface de jeu
-        print("Mouse down at : x=", event.x, "y = ", event.y)
-        self.GEng.selectPion_OnClick(event.x, event.y)
+
+        if self.nbrJoueurs != -1:
+            print("Mouse down at : x=", event.x, "y = ", event.y)
+            self.GEng.selectPion_OnClick(event.x, event.y)
+        else:
+            print("Left click at : x=", event.x, "y = ", event.y)
+            self.GEng.Creator_OnLeftClick(event.x, event.y)
+
+    def Creator_RightClick(self, event):
+        print("Right click at : x=", event.x, "y = ", event.y)
+        self.GEng.Creator_OnRightClick(event.x, event.y)
+            
     
     def Restart_Game(self): #Fonction redémarrant la partie
     
@@ -1153,15 +1239,18 @@ class Jeu(): #Classe représentant l'interface du jeu de dames
         self.master.destroy()
 
     def Update_Timer(self): #Fonction mettant à jour le timer de jeu et l'interface si le jeu est fini
+
         global timeLeft, Label_Timer, hasGameFinished, Root, Rules_Timer, IsMultiplayer, Timer_After
 
-        if hasGameFinished == False and Rules_Timer == True:
-            if (timeLeft <= 0 or timeLeft > 300001) and IsMultiplayer == False:
-                self.Skip_Turn()
-            timeLeft -= 1000
-            Label_Timer.config(text = "Temps restant : {}.{}".format(self.ConvertTime(timeLeft, False), self.ConvertTime(timeLeft, True)))
+        if self.nbrJoueurs != -1:
 
-        Timer_After = Root.after(1000, self.Update_Timer)
+            if hasGameFinished == False and Rules_Timer == True:
+                if (timeLeft <= 0 or timeLeft > 300001) and IsMultiplayer == False:
+                    self.Skip_Turn()
+                timeLeft -= 1000
+                Label_Timer.config(text = "Temps restant : {}.{}".format(self.ConvertTime(timeLeft, False), self.ConvertTime(timeLeft, True)))
+
+            Timer_After = Root.after(1000, self.Update_Timer)
         
     
     def ConvertTime(self, timeLeft, toSeconds): #On convertit le temps
@@ -1223,11 +1312,11 @@ class Network():
                 print("Waiting for message !")
                 self.Serveur_WaitMessage()
 
-        except:
-
-            Queue_MultiplayerToGui.put("Disconnected!Error")
-            self.Serveur_StopServer()
-            return
+        except Exception as e:
+            print(e)
+            #Queue_MultiplayerToGui.put("Disconnected!Error")
+            #self.Serveur_StopServer()
+            #return
 
     def Serveur_WaitMessage(self): #On attend un message du client
 
@@ -1349,11 +1438,11 @@ class Network():
                 self.Process_Queue()
                 time.sleep(0.1)
 
-        except:
-
-            Queue_MultiplayerToGui.put("Disconnected!Error")
-            self.Client_CloseConnection()
-            return
+        except Exception as e:
+            print(e)
+            #Queue_MultiplayerToGui.put("Disconnected!Error")
+            #self.Client_CloseConnection()
+            #return
 
     def Client_SendMessage(self, MessageToSend): #On envoit un message au serveur
 
@@ -1400,11 +1489,9 @@ class Network():
 
                     msg_justByte = self.msg_recu[22:]
 
-                    print("Tableau découpé !")
-                    
-                    with open(msg_justByte, "rb") as f:
-                    
-                        TableauPions_Global = pickle.loads(f)
+                    print("Tableau découpé : ")
+					
+                    TableauPions_Global = pickle.loads(msg_justByte)
 
                     print("Pickle loads !")
 
@@ -1426,12 +1513,12 @@ class Network():
 
             Queue_MultiplayerToGui.put("SetNewArrayAndSwitchTurn!")
 
-        except:
+        #except:
 
-            Queue_MultiplayerToGui.put("Disconnected!Error")
+            #Queue_MultiplayerToGui.put("Disconnected!Error")
 
-            self.Client_CloseConnection()
-            return
+            #self.Client_CloseConnection()
+            #return
 
 
     def Client_CloseConnection(self): #On ferme la connexion au serveur
@@ -1577,6 +1664,8 @@ class GameEngine(): #Classe représentant le moteur du jeu
         
         self.nbrToursJoue = 0
 
+        self.isCreator = False
+
     ##Fonctions multijoueurs
 
     def Process_Queue(self): #On regarde les messages dans la queue
@@ -1644,6 +1733,66 @@ class GameEngine(): #Classe représentant le moteur du jeu
 
     ##Fin des fonctions multijoueurs
 
+    ##Fonctions du créateur
+
+    def StartCreator(self):
+
+        self.isCreator = True
+
+        self.canvas.delete()
+
+        self.GenerateTableauPlayer(2)
+
+        self.GenerateTableauPion(True)
+
+        self.Refresh(False)
+
+    def Creator_OnLeftClick(self, x, y):
+
+        caseClick = self.getCaseIdByPos(x, y)
+
+        if caseClick != 99:
+
+            if self.TableauPions[caseClick].Status == "Null":
+
+                self.TableauPions[caseClick].Couleur = "Blanc"
+                self.TableauPions[caseClick].Equipe = "2"
+                self.TableauPions[caseClick].Status = "Pion"
+
+            else:
+
+                self.TableauPions[caseClick].Couleur = "Null"
+                self.TableauPions[caseClick].Equipe = "0"
+                self.TableauPions[caseClick].Status = "Null"
+
+        self.Refresh(False)
+
+    def Creator_OnRightClick(self, x, y):
+
+        caseClick = self.getCaseIdByPos(x, y)
+
+        if caseClick != 99 and self.TableauPions[caseClick].Status != "Null":
+
+            if self.TableauPions[caseClick].Couleur == "Blanc":
+                if self.TableauPions[caseClick].Status == "Pion":
+                    self.TableauPions[caseClick].Status = "Dame"
+                else:
+                    self.TableauPions[caseClick].Status = "Pion"
+                    self.TableauPions[caseClick].Couleur = "Noir"
+                    self.TableauPions[caseClick].Equipe = "1"
+            else:
+                if self.TableauPions[caseClick].Status == "Pion":
+                    self.TableauPions[caseClick].Status = "Dame"
+                else:
+                    self.TableauPions[caseClick].Status = "Pion"
+                    self.TableauPions[caseClick].Couleur = "Blanc"
+                    self.TableauPions[caseClick].Equipe = "2"
+          
+        self.Refresh(False)
+                         
+
+    ##Fin des fonctions du créateur
+
     def StartGame(self, nombreJoueurs, isRestart): #Fonction se lançant au début de la partie
 
         global Rules_DamesEnable, Rules_PriseMultipleEnable, Rules_PriseObligatoireEnable, Button_SkipTour, hasGameFinished, timeLeft, Queue_GuiToMultiplayer, Label_Joueur1, Label_Joueur2, Timer_After, Root, IA_Version, Button_LoadConfig, Button_SaveConfig
@@ -1669,7 +1818,7 @@ class GameEngine(): #Classe représentant le moteur du jeu
         self.canvas.delete() #On efface tout
 
         #On génère par défaut les pions et les joueurs
-        self.GenerateTableauPion() 
+        self.GenerateTableauPion(False) 
         self.GenerateTableauPlayer(nombreJoueurs)
         
         if nombreJoueurs == 0:
@@ -1732,13 +1881,15 @@ class GameEngine(): #Classe représentant le moteur du jeu
         self.showTerrainFromPionPlace()
 
         #Si c'est un nouveau tour on en change sinon on actualise juste
+
         if SwitchTurn == True:
             if fromNetwork == True:
                 self.Tour(True, False, True, True)
             else:
                 self.Tour(True, False, True)
         else:
-            self.Tour(False, False, False)
+            if self.isCreator == False:
+                self.Tour(False, False, False)
     
     def IA(self):
         global IA_Version
@@ -2013,34 +2164,68 @@ class GameEngine(): #Classe représentant le moteur du jeu
 
         return False
 
-    def GenerateTableauPion(self): #Fonction gérant la position initiale des pions
+    def GenerateTableauPion(self, isCreator): #Fonction gérant la position initiale des pions
         
         PosX = -25
         PosY = 25
         i = 0
 
         while i < 100:
+
             PosX += 50
+
             if i < 10 or (i >= 20 and i < 30):
+
                 self.TableauPions[i] = Case("Null", PosX, PosY, "Null", "0")
+
                 PosX += 50
-                self.TableauPions[i+1] = Case("Noir", PosX, PosY, "Pion", "1")
+
+                if isCreator:
+                    self.TableauPions[i+1] = Case("Null", PosX, PosY, "Null", "0")
+                else:
+                    self.TableauPions[i+1] = Case("Noir", PosX, PosY, "Pion", "1")
+
             elif (i >= 10 and i <= 20) or (i >= 30 and i < 40):
-                self.TableauPions[i] = Case("Noir", PosX, PosY, "Pion", "1")
+
+                if isCreator:
+                    self.TableauPions[i] = Case("Null", PosX, PosY, "Null", "0")
+                else:
+                    self.TableauPions[i] = Case("Noir", PosX, PosY, "Pion", "1")
+
                 PosX += 50
+
                 self.TableauPions[i+1] = Case("Null", PosX, PosY, "Null", "0")
+
             elif i >= 40 and i < 60:
+
                 self.TableauPions[i] = Case("Null", PosX, PosY, "Null", "0")
+
                 PosX += 50
+
                 self.TableauPions[i+1] = Case("Null", PosX, PosY, "Null", "0")
+
             elif (i >= 60 and i < 70) or (i >= 80 and i < 90):
+
                 self.TableauPions[i] = Case("Null", PosX, PosY, "Null", "0")
+
                 PosX += 50
-                self.TableauPions[i+1] = Case("Blanc", PosX, PosY, "Pion", "2")
+
+                if isCreator:
+                    self.TableauPions[i+1] = Case("Null", PosX, PosY, "Null", "0")
+                else:
+                    self.TableauPions[i+1] = Case("Blanc", PosX, PosY, "Pion", "2")
+
             elif (i >= 70 and i <= 80) or i >= 90:
-                self.TableauPions[i] = Case("Blanc", PosX, PosY, "Pion", "2")
+
+                if isCreator:
+                    self.TableauPions[i] = Case("Null", PosX, PosY, "Null", "0")
+                else:
+                    self.TableauPions[i] = Case("Blanc", PosX, PosY, "Pion", "2")
+
                 PosX += 50
+
                 self.TableauPions[i+1] = Case("Null", PosX, PosY, "Null", "0")
+
             i += 2
             
             if i == 10 or i == 20 or i == 30 or i == 40 or i == 50 or i == 60 or i == 70 or i == 80 or i == 90:
